@@ -451,6 +451,15 @@ def g2gn(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
 
 
 def g2gnw(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
+    """g2 + gn + w ansatz
+
+    Args:
+        num_qubits (int): _description_
+        num_layers (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: _description_
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit([qc, g2(num_qubits, 1), gn(
