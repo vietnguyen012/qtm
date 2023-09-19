@@ -1,6 +1,5 @@
 import types
 import qiskit
-import qtm.evolution
 import qtm.random_circuit
 import qtm.state
 import qtm.qcompilation

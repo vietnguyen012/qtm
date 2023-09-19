@@ -1,5 +1,4 @@
 import types
-import qiskit
 from qtm.evolution import ecircuit
 import qtm.random_circuit
 import qtm.state
