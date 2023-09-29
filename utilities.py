@@ -6,6 +6,17 @@ import numpy as np
 import types
 import typing
 
+def save_circuit(qc: qiskit.QuantumCircuit, file_name: typing.ByteString):
+    with open(f"{file_name}.qpy", "wb") as qpy_file_write:
+        qiskit.qpy.dump(qc, qpy_file_write)
+    return
+
+def load_circuit(file_name: typing.ByteString)->qiskit.QuantumCircuit:
+    with open(f"{file_name}.qpy", "rb") as qpy_file_read:
+        qc = qiskit.qpy.load(qpy_file_read)[0]
+    return qc
+
+
 def unit_vector(i, length):
     unit_vector = np.zeros((length))
     unit_vector[i] = 1.0

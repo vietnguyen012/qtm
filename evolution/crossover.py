@@ -10,3 +10,4 @@ def onepoint_crossover(qc1, qc2, percent = 0.5):
     new_qc2 = ECircuit(qtm.utilities.compose_circuit([sub21, sub12]), qc1.fitness_func)
     return new_qc1, new_qc2
 
+    
