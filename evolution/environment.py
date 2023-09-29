@@ -1,4 +1,4 @@
-import types
+import types, typing
 from qtm.evolution import ecircuit
 import qtm.random_circuit
 import qtm.state
@@ -8,31 +8,73 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import qtm.progress_bar
-
+import pickle
 
 class EEnvironment():
-    def __init__(self, params: [],
-                 fitness_func: types.FunctionType,
-                 crossover_func: types.FunctionType,
-                 mutate_func: types.FunctionType,
-                 selection_func: types.FunctionType,
-                 pool) -> None:
-        self.best_score_progress = []
-        self.scores_in_loop = []
+
+    def __init__(self, file_name: str):
+        file = open(file_name, 'rb')
+        data = pickle.load(file)
+        self.__init__(
+            data.params,
+            data.fitness_func,
+            data.crossover_func,
+            data.mutate_func,
+            data.selection_func,
+            data.pool, data.save_progress)
+        file.close()
+        return
+    def __init__(self, params: typing.Union[typing.List, str],
+                 fitness_func: types.FunctionType = None,
+                 crossover_func: types.FunctionType = None,
+                 mutate_func: types.FunctionType = None,
+                 selection_func: types.FunctionType = None,
+                 pool = None, save_progress = False) -> None:
+        """_summary_
+
+        Args:
+            params (typing.Union[typing.List, str]): Other params for GA proces
+            fitness_func (types.FunctionType, optional): Defaults to None.
+            crossover_func (types.FunctionType, optional): Defaults to None.
+            mutate_func (types.FunctionType, optional): Defaults to None.
+            selection_func (types.FunctionType, optional): Defaults to None.
+            pool (_type_, optional): Pool gate. Defaults to None.
+            save_progress (bool, optional): is save progress or not. Defaults to False.
+        """
+        if isinstance(params, str):
+            file = open(params, 'rb')
+            data = pickle.load(file)
+            params = data.params
+            self.fitness_func = data.fitness_func
+            self.crossover_func = data.crossover_func
+            self.mutate_func = data.mutate_func
+            self.selection_func = data.selection_func
+            self.pool = data.pool
+            self.save_progress = data.save_progress
+            self.best_candidate = data.best_candidate
+            self.population = data.population
+            self.populations = data.populations
+            self.best_score_progress = data.best_score_progress
+            self.scores_in_loop = data.scores_in_loop
+        else:
+            self.params = params
+            self.fitness_func = fitness_func
+            self.crossover_func = crossover_func
+            self.mutate_func = mutate_func
+            self.selection_func = selection_func
+            self.pool = pool
+            self.save_progress = save_progress
+            self.best_candidate = None
+            self.population = []
+            self.populations = []
+            self.best_score_progress = []
+            self.scores_in_loop = []
         self.depth = params['depth']
         self.num_individual = params['num_individual']  # Must mod 8 = 0
         self.num_generation = params['num_generation']
         self.num_qubits = params['num_qubits']
         self.prob_mutate = params['prob_mutate']
         self.threshold = params['threshold']
-        self.fitness_func = fitness_func
-        self.crossover_func = crossover_func
-        self.mutate_func = mutate_func
-        self.selection_func = selection_func
-        self.fitness = 0
-        self.pool = pool
-        self.best_candidate = None
-        self.population = []
         return
 
     def evol(self, verbose: int = 1):
@@ -46,11 +88,13 @@ class EEnvironment():
             self.population = self.selection_func(self.population)
             for i in range(0, self.num_individual, 2):
                 # Crossover
-                child_1, child_2 = self.crossover_func(
+                offspring1, offspring2 = self.crossover_func(
                     self.population[i], self.population[i+1])
-                new_population.extend([child_1, child_2])
-                self.scores_in_loop.extend([child_1.fitness, child_2.fitness])
+                new_population.extend([offspring1, offspring2])
+                self.scores_in_loop.extend([offspring1.fitness, offspring2.fitness])
             self.population = new_population
+            if self.save_progress:
+                self.populations.append(self.population)
             # Mutate
             for individual in self.population:
                 if random.random() < self.prob_mutate:
@@ -88,3 +132,11 @@ class EEnvironment():
         plt.xlabel('No. generation')
         plt.ylabel('Best score')
         plt.show()
+        
+    def save(self, file_name):
+        file = open(file_name, 'wb')
+        pickle.dump(self, file)
+        file.close()
+        return
+
+    
