@@ -128,48 +128,53 @@ def get_metrics(rho, sigma):
 
     Args:
         - psi (Statevector): first state vector
-        - psi_hat (Statevector): second state vector
+        - sigma (Statevector): second state vector
 
     Returns:
-        - Tuple: trace and fidelity
+        - Tuple: trace and fidelity between two input vectors
     """
     return qtm.utilities.trace_distance(rho,
                                         sigma), qtm.utilities.trace_fidelity(rho, sigma)
 
-def calculate_state_preparation_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, **kwargs):
+def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas):
+    rho = qiskit.quantum_info.DensityMatrix.from_instruction(vdagger)
+    qc = u.bind_parameters(thetas)
+    sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
+    trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
+    return trace, np.real(fidelity)
+
+def calculate_QST_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas):
+    rho = qiskit.quantum_info.DensityMatrix.from_instruction(u)
+    qc = vdagger.bind_parameters(thetas)
+    sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
+    trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
+    return trace, np.real(fidelity)
+
+def calculate_QSP_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass):
     traces = []
     fidelities = []
     for thetas in thetass:
         # Target state
         # psi = qiskit.quantum_info.Statevector.from_instruction(vdagger).conjugate()
         # rho = qiskit.quantum_info.DensityMatrix(psi)
-        
-        rho = qiskit.quantum_info.DensityMatrix.from_instruction(vdagger)
-        # Preparation state
-        qc = u.bind_parameters(thetas)
-        sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
         # Calculate the metrics
-        trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
+        trace, fidelity = calculate_QSP_metric(u, vdagger, thetas)
         traces.append(trace)
         fidelities.append(fidelity)
 
-    ce = concentratable_entanglement(qc)
+    ce = concentratable_entanglement(u.bind_parameters(thetas))
     return traces, fidelities, ce
 
 
-def calculate_state_tomography_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, **kwargs):
+def calculate_QST_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass):
     traces = []
     fidelities = []
     for thetas in thetass:
-        rho = qiskit.quantum_info.DensityMatrix.from_instruction(u)
-        qc = vdagger.bind_parameters(thetas)
-        sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
-        # Calculate the metrics
-        trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
+        trace, fidelity = calculate_QST_metric(u, vdagger, thetas)
         traces.append(trace)
         fidelities.append(fidelity)
 
-    ce = concentratable_entanglement(qc)
+    ce = concentratable_entanglement(vdagger.bind_parameters(thetas))
     return traces, fidelities, ce
 
 

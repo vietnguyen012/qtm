@@ -2,11 +2,15 @@ import qtm.base
 import qtm.optimizer
 import qtm.loss
 import qtm.utilities
+import qtm.qst
+import qtm.qsp
 import numpy as np
-import typing, types
+import typing
+import types
 import qiskit
 import matplotlib.pyplot as plt
-import os
+import pickle
+
 
 class QuantumCompilation():
     def __init__(self) -> None:
@@ -64,7 +68,8 @@ class QuantumCompilation():
         if isinstance(_vdagger, qiskit.QuantumCircuit):
             self.vdagger = _vdagger
         else:
-            raise ValueError('The V dagger part must be a determined quantum circuit')
+            raise ValueError(
+                'The V dagger part must be a determined quantum circuit')
         return
 
     def set_loss_func(self, _loss_func: typing.Union[types.FunctionType, str]):
@@ -84,7 +89,8 @@ class QuantumCompilation():
             elif _loss_func == 'loss_fubini_study':
                 self.loss_func = qtm.loss.loss_fubini_study
         else:
-            raise ValueError('The loss function must be a function f: measurement value -> loss value or string in ["loss_basic", "loss_fubini_study"]')
+            raise ValueError(
+                'The loss function must be a function f: measurement value -> loss value or string in ["loss_basic", "loss_fubini_study"]')
         return
 
     def set_optimizer(self, _optimizer: typing.Union[types.FunctionType, str]):
@@ -98,7 +104,7 @@ class QuantumCompilation():
         """
         if callable(_optimizer):
             self.optimizer = _optimizer
-        elif isinstance(_optimizer,str):
+        elif isinstance(_optimizer, str):
             if _optimizer == 'sgd':
                 self.optimizer = qtm.optimizer.sgd
             elif _optimizer == 'adam':
@@ -114,9 +120,10 @@ class QuantumCompilation():
             elif _optimizer == 'qng_adam':
                 self.optimizer = qtm.optimizer.qng_adam
         else:
-            raise ValueError('The optimizer must be a function f: thetas -> thetas or string in ["sgd", "adam", "qng_qfim", "qng_fubini_study", "qng_adam"]')
+            raise ValueError(
+                'The optimizer must be a function f: thetas -> thetas or string in ["sgd", "adam", "qng_qfim", "qng_fubini_study", "qng_adam"]')
         return
-    
+
     def set_num_step(self, _num_step: int):
         """Set the number of iteration for compiler
 
@@ -129,7 +136,8 @@ class QuantumCompilation():
         if _num_step > 0 and isinstance(_num_step, int):
             self.num_step = _num_step
         else:
-            raise ValueError('Number of iterations must be a integer, such that 10 or 100.')
+            raise ValueError(
+                'Number of iterations must be a integer, such that 10 or 100.')
         return
 
     def set_thetas(self, _thetas: np.ndarray):
@@ -157,7 +165,7 @@ class QuantumCompilation():
         Args:
             - num_steps: number of iterations
             - verbose (int, optional): 0, 1, or 2. Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per 10 steps. Verbose 1 is good for timing training time, verbose 2 if you want to log loss values to a file. Please install package tdqm if you want to use verbose 1. 
-        
+
         """
         if len(self.thetas) == 0:
             if (len(self.u.parameters)) > 0:
@@ -165,54 +173,69 @@ class QuantumCompilation():
             else:
                 self.thetas = np.ones(len(self.vdagger.parameters))
         self.is_trained = True
-        self.thetass, self.loss_values = qtm.base.fit(self.u, self.vdagger, self.thetas, num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
+        self.thetass, self.loss_values = qtm.base.fit(
+            self.u, self.vdagger, self.thetas, num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
         if (len(self.u.parameters)) > 0:
-            self.traces, self.fidelities, self.ce = qtm.utilities.calculate_state_preparation_metrics(self.u, self.vdagger, self.thetass, **self.kwargs)
+            self.traces, self.fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
+                self.u, self.vdagger, self.thetass, **self.kwargs)
         else:
-            self.traces, self.fidelities, self.ce = qtm.utilities.calculate_state_tomography_metrics(self.u, self.vdagger, self.thetass, **self.kwargs)
-        
+            self.traces, self.fidelities, self.ce = qtm.utilities.calculate_QST_metrics(
+                self.u, self.vdagger, self.thetass, **self.kwargs)
+
         return
 
     def plot(self):
         plt.plot(self.loss_values)
         plt.ylabel("Loss values")
         plt.xlabel('Num. iteration')
-        return 
-    
-    def save(self, metric: str = "", text = "", path = './', save_all: bool = False,run_trial=0):
-        """_summary_
-
-        Args:
-            - metric (str)
-            - text (str): Defaults to './'. Additional file name string
-            - path (str, optional): Defaults to './'.
-            - save_all (bool, optional): Save thetass, fidelity, trace and loss_value if save_all = True
-
-        Raises:
-            ValueError: if save_all = False and metric is not right.
-        """
-        if not os.path.exists(path):
-            os.makedirs(path)
-        if save_all:
-            #np.savetxt(path + "/thetass" + text + ".csv", self.thetass, delimiter=",")
-            np.savetxt(path + "/thetass" + text + ".csv", self.thetass, fmt='%s')
-            np.savetxt(path + "/fidelities"+ text + ".csv", self.fidelities, delimiter=",")
-            np.savetxt(path + "/traces" + text + ".csv", self.traces, delimiter=",")
-            np.savetxt(path + "/ce_values" + text + f"_{run_trial}" + ".csv", [self.ce], delimiter=",")
-            np.savetxt(path + "/loss_values" + text + ".csv", self.loss_values, delimiter=",")
-        else:
-            if metric == 'thetas':
-                np.savetxt(path + "/thetass" + text + ".csv", self.thetass, delimiter=",")
-            elif metric == 'fidelity':
-                np.savetxt(path + "/fidelities" + text + ".csv", self.fidelities, delimiter=",")
-            elif metric == 'trace':
-                np.savetxt(path + "/traces" + text + ".csv", self.traces, delimiter=",")
-            elif metric == 'loss_value':
-                np.savetxt(path + "/loss_values" + text + ".csv", self.loss_values, delimiter=",")
-            else:
-                raise ValueError('The metric must be thetas, fidelity, trace or loss_value')
-            print("Saved " + metric + " at " + path)
         return
+
+    def save(self, ansatz, state, file_name):
+        if (len(self.u.parameters)) > 0:
+            qspobj = qtm.qsp.QuantumStatePreparation.load_from_compiler(
+                self,
+                ansatz=ansatz)
+            qspobj.save(state, file_name)
+        else:
+            qstobj = qtm.qst.QuantumStateTomography.load_from_compiler(
+                self,
+                ansatz=ansatz)
+            qstobj.save(state, file_name)
+        return
+    # def save(self, metric: str = "", text = "", path = './', save_all: bool = False,run_trial=0):
+    #     """_summary_
+
+    #     Args:
+    #         - metric (str)
+    #         - text (str): Defaults to './'. Additional file name string
+    #         - path (str, optional): Defaults to './'.
+    #         - save_all (bool, optional): Save thetass, fidelity, trace and loss_value if save_all = True
+
+    #     Raises:
+    #         ValueError: if save_all = False and metric is not right.
+    #     """
+    #     if not os.path.exists(path):
+    #         os.makedirs(path)
+    #     if save_all:
+    #         #np.savetxt(path + "/thetass" + text + ".csv", self.thetass, delimiter=",")
+    #         np.savetxt(path + "/thetass" + text + ".csv", self.thetass, fmt='%s')
+    #         np.savetxt(path + "/fidelities"+ text + ".csv", self.fidelities, delimiter=",")
+    #         np.savetxt(path + "/traces" + text + ".csv", self.traces, delimiter=",")
+    #         np.savetxt(path + "/ce_values" + text + f"_{run_trial}" + ".csv", [self.ce], delimiter=",")
+    #         np.savetxt(path + "/loss_values" + text + ".csv", self.loss_values, delimiter=",")
+    #     else:
+    #         if metric == 'thetas':
+    #             np.savetxt(path + "/thetass" + text + ".csv", self.thetass, delimiter=",")
+    #         elif metric == 'fidelity':
+    #             np.savetxt(path + "/fidelities" + text + ".csv", self.fidelities, delimiter=",")
+    #         elif metric == 'trace':
+    #             np.savetxt(path + "/traces" + text + ".csv", self.traces, delimiter=",")
+    #         elif metric == 'loss_value':
+    #             np.savetxt(path + "/loss_values" + text + ".csv", self.loss_values, delimiter=",")
+    #         else:
+    #             raise ValueError('The metric must be thetas, fidelity, trace or loss_value')
+    #         print("Saved " + metric + " at " + path)
+    #     return
 
     def reset(self):
         """Delete all current property of compiler
