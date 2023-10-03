@@ -145,7 +145,7 @@ def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircui
 
 def calculate_QST_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas):
     rho = qiskit.quantum_info.DensityMatrix.from_instruction(u)
-    qc = vdagger.bind_parameters(thetas)
+    qc = vdagger.bind_parameters(thetas).inverse()
     sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
     trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
     return trace, np.real(fidelity)

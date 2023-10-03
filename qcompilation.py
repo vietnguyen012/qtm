@@ -27,6 +27,7 @@ class QuantumCompilation():
         self.ce = None
         self.kwargs = None
         self.is_evolutional = False
+        self.num_steps = 0
         return
 
     def __init__(self, u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, optimizer: typing.Union[types.FunctionType, str], loss_func: typing.Union[types.FunctionType, str], thetas: np.ndarray = np.array([]), **kwargs):
@@ -124,17 +125,17 @@ class QuantumCompilation():
                 'The optimizer must be a function f: thetas -> thetas or string in ["sgd", "adam", "qng_qfim", "qng_fubini_study", "qng_adam"]')
         return
 
-    def set_num_step(self, _num_step: int):
+    def set_num_steps(self, _num_steps: int):
         """Set the number of iteration for compiler
 
         Args:
-            - _num_step (int): number of iterations
+            - _num_steps (int): number of iterations
 
         Raises:
             ValueError: when you pass a nasty value
         """
-        if _num_step > 0 and isinstance(_num_step, int):
-            self.num_step = _num_step
+        if _num_steps > 0 and isinstance(_num_steps, int):
+            self.num_steps = _num_steps
         else:
             raise ValueError(
                 'Number of iterations must be a integer, such that 10 or 100.')
@@ -167,6 +168,7 @@ class QuantumCompilation():
             - verbose (int, optional): 0, 1, or 2. Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per 10 steps. Verbose 1 is good for timing training time, verbose 2 if you want to log loss values to a file. Please install package tdqm if you want to use verbose 1. 
 
         """
+        self.num_steps = num_steps
         if len(self.thetas) == 0:
             if (len(self.u.parameters)) > 0:
                 self.thetas = np.ones(len(self.u.parameters))
@@ -174,7 +176,7 @@ class QuantumCompilation():
                 self.thetas = np.ones(len(self.vdagger.parameters))
         self.is_trained = True
         self.thetass, self.loss_values = qtm.base.fit(
-            self.u, self.vdagger, self.thetas, num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
+            self.u, self.vdagger, self.thetas, self.num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
         if (len(self.u.parameters)) > 0:
             self.traces, self.fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
                 self.u, self.vdagger, self.thetass, **self.kwargs)
@@ -189,7 +191,33 @@ class QuantumCompilation():
         plt.ylabel("Loss values")
         plt.xlabel('Num. iteration')
         return
+    
+    def plot_animation(self, interval: int = 100, file_name: str = 'test.gif'):
+        import matplotlib.animation as animation
+        x = np.linspace(0, int(self.num_steps), int(self.num_steps))
+        y1 = self.loss_values
+        y2 = self.fidelities
+        y3 = self.traces
+        fig, ax = plt.subplots()
+        ax.set_xlim(int(-self.num_steps*0.05), int(self.num_steps*1.05))
+        ax.set_ylim(-0.05, 1.05)
+        plt.ylabel("Loss values")
+        plt.xlabel('Num. iteration')
+        xs = []
+        ys1, ys2, ys3 = [], [], []
+        def update(i):
+            xs.append(x[i])
+            ys1.append(y1[i])
+            ys2.append(y2[i])
+            ys3.append(y3[i])
+            ax.plot(xs, ys1, color='blue', label = 'Loss value')
+            ax.plot(xs, ys2, color='red', label = 'Fidelity')
+            ax.plot(xs, ys3, color='green', label = 'Trace')
 
+        animator = animation.FuncAnimation(fig, update,
+                                    interval=interval, repeat=False)
+        animator.save(file_name)
+        return
     def save(self, ansatz, state, file_name):
         if (len(self.u.parameters)) > 0:
             qspobj = qtm.qsp.QuantumStatePreparation.load_from_compiler(
@@ -202,40 +230,6 @@ class QuantumCompilation():
                 ansatz=ansatz)
             qstobj.save(state, file_name)
         return
-    # def save(self, metric: str = "", text = "", path = './', save_all: bool = False,run_trial=0):
-    #     """_summary_
-
-    #     Args:
-    #         - metric (str)
-    #         - text (str): Defaults to './'. Additional file name string
-    #         - path (str, optional): Defaults to './'.
-    #         - save_all (bool, optional): Save thetass, fidelity, trace and loss_value if save_all = True
-
-    #     Raises:
-    #         ValueError: if save_all = False and metric is not right.
-    #     """
-    #     if not os.path.exists(path):
-    #         os.makedirs(path)
-    #     if save_all:
-    #         #np.savetxt(path + "/thetass" + text + ".csv", self.thetass, delimiter=",")
-    #         np.savetxt(path + "/thetass" + text + ".csv", self.thetass, fmt='%s')
-    #         np.savetxt(path + "/fidelities"+ text + ".csv", self.fidelities, delimiter=",")
-    #         np.savetxt(path + "/traces" + text + ".csv", self.traces, delimiter=",")
-    #         np.savetxt(path + "/ce_values" + text + f"_{run_trial}" + ".csv", [self.ce], delimiter=",")
-    #         np.savetxt(path + "/loss_values" + text + ".csv", self.loss_values, delimiter=",")
-    #     else:
-    #         if metric == 'thetas':
-    #             np.savetxt(path + "/thetass" + text + ".csv", self.thetass, delimiter=",")
-    #         elif metric == 'fidelity':
-    #             np.savetxt(path + "/fidelities" + text + ".csv", self.fidelities, delimiter=",")
-    #         elif metric == 'trace':
-    #             np.savetxt(path + "/traces" + text + ".csv", self.traces, delimiter=",")
-    #         elif metric == 'loss_value':
-    #             np.savetxt(path + "/loss_values" + text + ".csv", self.loss_values, delimiter=",")
-    #         else:
-    #             raise ValueError('The metric must be thetas, fidelity, trace or loss_value')
-    #         print("Saved " + metric + " at " + path)
-    #     return
 
     def reset(self):
         """Delete all current property of compiler
@@ -245,7 +239,7 @@ class QuantumCompilation():
         self.is_trained = False
         self.optimizer = None
         self.loss_func = None
-        self.num_step = 0
+        self.num_steps = 0
         self.thetas = None
         self.thetass = []
         self.loss_values = []
