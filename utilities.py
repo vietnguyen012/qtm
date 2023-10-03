@@ -137,9 +137,9 @@ def get_metrics(rho, sigma):
                                         sigma), qtm.utilities.trace_fidelity(rho, sigma)
 
 def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas):
-    rho = qiskit.quantum_info.DensityMatrix.from_instruction(vdagger)
     qc = u.bind_parameters(thetas)
-    sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
+    rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
+    sigma = qiskit.quantum_info.DensityMatrix.from_instruction(vdagger.inverse())
     trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
     return trace, np.real(fidelity)
 
@@ -161,7 +161,6 @@ def calculate_QSP_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircu
         trace, fidelity = calculate_QSP_metric(u, vdagger, thetas)
         traces.append(trace)
         fidelities.append(fidelity)
-
     ce = concentratable_entanglement(u.bind_parameters(thetas))
     return traces, fidelities, ce
 

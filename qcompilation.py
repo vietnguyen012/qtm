@@ -201,6 +201,9 @@ class QuantumCompilation():
         fig, ax = plt.subplots()
         ax.set_xlim(int(-self.num_steps*0.05), int(self.num_steps*1.05))
         ax.set_ylim(-0.05, 1.05)
+        loss_text = ax.text(0, 0, "", fontsize=12)
+        fid_text = ax.text(0, 0, "", fontsize=12)
+        trace_text = ax.text(0, 0, "", fontsize=12)
         plt.ylabel("Loss values")
         plt.xlabel('Num. iteration')
         xs = []
@@ -213,7 +216,12 @@ class QuantumCompilation():
             ax.plot(xs, ys1, color='blue', label = 'Loss value')
             ax.plot(xs, ys2, color='red', label = 'Fidelity')
             ax.plot(xs, ys3, color='green', label = 'Trace')
-
+            loss_text.set_position([xs[i], ys1[i]])
+            loss_text.set_text('Loss: ' + str(np.round(ys1[i], 2)))
+            fid_text.set_position([xs[i], ys2[i]])
+            fid_text.set_text('Fidelity: ' + str(np.round(ys2[i], 2)))
+            trace_text.set_position([xs[i], ys3[i]])
+            trace_text.set_text('Trace: ' + str(np.round(ys3[i], 2)))
         animator = animation.FuncAnimation(fig, update,
                                     interval=interval, repeat=False)
         animator.save(file_name)
