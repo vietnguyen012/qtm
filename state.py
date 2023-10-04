@@ -87,7 +87,7 @@ def create_haar_state(num_qubits: int):
     psi = 2*np.random.rand(2**num_qubits)-1
     psi = psi / np.linalg.norm(psi)
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
-    qc.initialize(psi, qubits = range(0, num_qubits))
+    qc.prepare_state(psi, list(range(0, num_qubits)))
     return qc
 
 def create_haar_state_inverse(num_qubits: int):
