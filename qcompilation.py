@@ -30,6 +30,7 @@ class QuantumCompilation():
         self.kwargs = None
         self.is_evolutional = False
         self.num_steps = 0
+        self.gibbs = False
         return
 
     def __init__(self, u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, optimizer: typing.Union[types.FunctionType, str], loss_func: typing.Union[types.FunctionType, str], thetas: np.ndarray = np.array([]), **kwargs):
