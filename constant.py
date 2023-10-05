@@ -16,6 +16,12 @@ delta = 0.01 # minimum change value of loss value
 discounting_factor = 0.3 # [0, 1]
 backend = qiskit.Aer.get_backend('qasm_simulator')
 
+# Logger
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+
 # For parameter-shift rule
 two_term_psr = {
     'r': 1/2,
@@ -143,9 +149,9 @@ clifford_set = [
 
 operations = [
     H_gate,
-    S_gate,
+    # S_gate,
     X_gate,
-    Y_gate,
+    # Y_gate,
     Z_gate,
     CX_gate,
     RX_gate,

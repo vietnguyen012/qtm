@@ -1,5 +1,10 @@
 import numpy as np
 
+def sastify_circuit(qc):
+    if len(qc.parameters) == 0:
+        return False
+    return True
+    
 def elitist_selection(population, num_elitist = 0):
     num_population = len(population)
     if num_elitist == 0:
@@ -26,7 +31,7 @@ def steady_state_selection(self, fitness, num_parents):
         # This function works with both single- and multi-objective optimization problems.
         fitness_sorted = self.sort_solutions_nsga2(fitness=fitness)
 
-        # Selecting the best individuals in the current generation as parents for producing the offspring of the next generation.
+        # Selecting the best circuits in the current generation as parents for producing the offspring of the next generation.
         if self.gene_type_single == True:
             parents = np.empty((num_parents, self.population.shape[1]), dtype=self.gene_type[0])
         else:
@@ -219,7 +224,7 @@ def wheel_cumulative_probs(self, probs, num_parents):
         # probs[min_probs_idx] = 99999999999
         probs[min_probs_idx] = float('inf')
 
-    # Selecting the best individuals in the current generation as parents for producing the offspring of the next generation.
+    # Selecting the best circuits in the current generation as parents for producing the offspring of the next generation.
     if self.gene_type_single == True:
         parents = np.empty((num_parents, self.population.shape[1]), dtype=self.gene_type[0])
     else:
@@ -282,7 +287,7 @@ def stochastic_universal_selection(self, fitness, num_parents):
                                             high=pointers_distance, 
                                             size=1)[0] # Location of the first pointer.
 
-    # Selecting the best individuals in the current generation as parents for producing the offspring of the next generation.
+    # Selecting the best circuits in the current generation as parents for producing the offspring of the next generation.
     if self.gene_type_single == True:
         parents = np.empty((num_parents, self.population.shape[1]), dtype=self.gene_type[0])
     else:

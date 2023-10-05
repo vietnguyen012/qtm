@@ -1,5 +1,5 @@
 import types, typing
-from qtm.evolution import ecircuit
+from qtm.evolution import ecircuit, selection
 import qtm.random_circuit
 import qtm.state
 import qtm.qcompilation
@@ -11,19 +11,6 @@ import qtm.progress_bar
 import pickle
 
 class EEnvironment():
-
-    def __init__(self, file_name: str):
-        file = open(file_name, 'rb')
-        data = pickle.load(file)
-        self.__init__(
-            data.params,
-            data.fitness_func,
-            data.crossover_func,
-            data.mutate_func,
-            data.selection_func,
-            data.pool, data.save_progress)
-        file.close()
-        return
     def __init__(self, params: typing.Union[typing.List, str],
                  fitness_func: types.FunctionType = None,
                  crossover_func: types.FunctionType = None,
@@ -41,52 +28,50 @@ class EEnvironment():
             pool (_type_, optional): Pool gate. Defaults to None.
             save_progress (bool, optional): is save progress or not. Defaults to False.
         """
-        if isinstance(params, str):
-            file = open(params, 'rb')
-            data = pickle.load(file)
-            params = data.params
-            self.fitness_func = data.fitness_func
-            self.crossover_func = data.crossover_func
-            self.mutate_func = data.mutate_func
-            self.selection_func = data.selection_func
-            self.pool = data.pool
-            self.save_progress = data.save_progress
-            self.best_candidate = data.best_candidate
-            self.population = data.population
-            self.populations = data.populations
-            self.best_score_progress = data.best_score_progress
-            self.scores_in_loop = data.scores_in_loop
-        else:
-            self.params = params
-            self.fitness_func = fitness_func
-            self.crossover_func = crossover_func
-            self.mutate_func = mutate_func
-            self.selection_func = selection_func
-            self.pool = pool
-            self.save_progress = save_progress
-            self.best_candidate = None
-            self.population = []
-            self.populations = []
-            self.best_score_progress = []
-            self.scores_in_loop = []
+        self.params = params
+        self.fitness_func = fitness_func
+        self.crossover_func = crossover_func
+        self.mutate_func = mutate_func
+        self.selection_func = selection_func
+        self.pool = pool
+        self.save_progress = save_progress
+        self.best_candidate = None
+        self.population = []
+        self.populations = []
+        self.best_score_progress = []
+        self.scores_in_loop = []
         self.depth = params['depth']
-        self.num_individual = params['num_individual']  # Must mod 8 = 0
+        self.num_circuit = params['num_circuit']  # Must mod 8 = 0
         self.num_generation = params['num_generation']
         self.num_qubits = params['num_qubits']
         self.prob_mutate = params['prob_mutate']
         self.threshold = params['threshold']
         return
 
+    def load_from_file(self, file_name: str):
+        file = open(file_name, 'rb')
+        data = pickle.load(file)
+        self.__init__(
+            data.params,
+            data.fitness_func,
+            data.crossover_func,
+            data.mutate_func,
+            data.selection_func,
+            data.pool, data.save_progress)
+        file.close()
+        return
+    
     def evol(self, verbose: int = 1):
         if verbose == 1:
             bar = qtm.progress_bar.ProgressBar(
                 max_value=self.num_generation, disable=False)
         for generation in range(self.num_generation):
+            print(generation)
             self.scores_in_loop = []
             new_population = []
             # Selection
             self.population = self.selection_func(self.population)
-            for i in range(0, self.num_individual, 2):
+            for i in range(0, self.num_circuit, 2):
                 # Crossover
                 offspring1, offspring2 = self.crossover_func(
                     self.population[i], self.population[i+1])
@@ -96,9 +81,9 @@ class EEnvironment():
             if self.save_progress:
                 self.populations.append(self.population)
             # Mutate
-            for individual in self.population:
+            for circuit in self.population:
                 if random.random() < self.prob_mutate:
-                    self.mutate_func(individual, self.pool)
+                    self.mutate_func(circuit, self.pool)
 
             best_score = np.min(self.scores_in_loop)
             best_index = np.argmin(self.scores_in_loop)
@@ -116,14 +101,18 @@ class EEnvironment():
 
     def initialize_population(self):
         self.population = []
-        for _ in range(self.num_individual):
+        num_sastify_circuit = 0
+        while(num_sastify_circuit <= self.num_circuit):
             random_circuit = qtm.random_circuit.generate_with_pool(
                 self.num_qubits, self.depth, self.pool)
-            individual = ecircuit.ECircuit(
-                random_circuit,
-                self.fitness_func)
-            individual.compile()
-            self.population.append(individual)
+            
+            if selection.sastify_circuit(random_circuit):
+                num_sastify_circuit += 1
+                circuit = ecircuit.ECircuit(
+                    random_circuit,
+                    self.fitness_func)
+                circuit.compile()
+                self.population.append(circuit)
         self.best_candidate = self.population[0]
         return
 
