@@ -24,6 +24,8 @@ class QuantumCompilation():
         self.loss_values = []
         self.fidelities = []
         self.traces = []
+        self.gibbs_fidelities = []
+        self.gibbs_traces = []
         self.ce = None
         self.kwargs = None
         self.is_evolutional = False
@@ -178,10 +180,10 @@ class QuantumCompilation():
         self.thetass, self.loss_values = qtm.base.fit(
             self.u, self.vdagger, self.thetas, self.num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
         if (len(self.u.parameters)) > 0:
-            self.traces, self.fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
+            self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
                 self.u, self.vdagger, self.thetass, **self.kwargs)
         else:
-            self.traces, self.fidelities, self.ce = qtm.utilities.calculate_QST_metrics(
+            self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QST_metrics(
                 self.u, self.vdagger, self.thetass, **self.kwargs)
 
         return
