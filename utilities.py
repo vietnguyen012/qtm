@@ -77,7 +77,6 @@ def concentratable_entanglement(u: qiskit.QuantumCircuit, exact=False):
 
         return 1-counts.get("0"*len(qubit), 0)/qtm.constant.num_shots
 
-
 def extract_state(qc: qiskit.QuantumCircuit):
     """Get infomation about quantum circuit
 
@@ -122,8 +121,19 @@ def trace_fidelity(rho, sigma):
         scipy.linalg.sqrtm(
             (scipy.linalg.sqrtm(rho)) @ (rho)) @ (scipy.linalg.sqrtm(sigma)))
 
+def gibbs_trace_fidelity(rho, sigma):
+    if rho is None:
+        return None
+    half_power_sigma = scipy.linalg.fractional_matrix_power(sigma,1/2)
+    return np.trace(scipy.linalg.sqrtm(
+        half_power_sigma @ rho.data @ half_power_sigma))
 
-def get_metrics(rho, sigma):
+def gibbs_trace(rho):
+    if rho is None:
+        return None
+    return np.trace(np.linalg.matrix_power(rho,2))
+
+def get_metrics(rho, sigma, gibbs_rho, gibbs_sigma):
     """Get different metrics between the origin state and the reconstructed state
 
     Args:
@@ -134,47 +144,68 @@ def get_metrics(rho, sigma):
         - Tuple: trace and fidelity between two input vectors
     """
     return qtm.utilities.trace_distance(rho,
-                                        sigma), qtm.utilities.trace_fidelity(rho, sigma)
+                                        sigma), qtm.utilities.trace_fidelity(rho, sigma),qtm.utilities.gibbs_trace(
+                                            gibbs_rho), qtm.utilities.gibbs_trace_fidelity(gibbs_rho,gibbs_sigma)
 
-def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas):
+def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas, gibbs=False):
     qc = u.bind_parameters(thetas)
     rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
     sigma = qiskit.quantum_info.DensityMatrix.from_instruction(vdagger.inverse())
-    trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
-    return trace, np.real(fidelity)
+    if gibbs:
+        gibbs_rho = qiskit.quantum_info.partial_trace(rho,[0,1])
+        gibbs_sigma = qiskit.quantum_info.partial_trace(sigma,[0,1])
+    else:
+        gibbs_rho = None,
+        gibbs_sigma = None
+    trace, fidelity, gibbs_trace, gibbs_trace_fidelity = qtm.utilities.get_metrics(rho, sigma, gibbs_rho, gibbs_sigma)
+    return trace, np.real(fidelity),gibbs_trace, np.real(gibbs_trace_fidelity)
 
-def calculate_QST_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas):
+def calculate_QST_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas, gibbs = False):
     rho = qiskit.quantum_info.DensityMatrix.from_instruction(u)
     qc = vdagger.bind_parameters(thetas).inverse()
     sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
-    trace, fidelity = qtm.utilities.get_metrics(rho, sigma)
-    return trace, np.real(fidelity)
+    if gibbs:
+        gibbs_rho = qiskit.quantum_info.partial_trace(rho,[0,1])
+        gibbs_sigma = qiskit.quantum_info.partial_trace(sigma,[0,1])
+    else:
+        gibbs_rho = None,
+        gibbs_sigma = None
+    trace, fidelity, gibbs_trace, gibbs_trace_fidelity = qtm.utilities.get_metrics(rho, sigma, gibbs_rho, gibbs_sigma)
+    return trace, np.real(fidelity),gibbs_trace, np.real(gibbs_trace_fidelity)
 
-def calculate_QSP_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass):
+def calculate_QSP_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, gibbs = False):
     traces = []
     fidelities = []
+    gibbs_traces = []
+    gibbs_trace_fidelities = []
     for thetas in thetass:
         # Target state
         # psi = qiskit.quantum_info.Statevector.from_instruction(vdagger).conjugate()
         # rho = qiskit.quantum_info.DensityMatrix(psi)
         # Calculate the metrics
-        trace, fidelity = calculate_QSP_metric(u, vdagger, thetas)
+        trace, fidelity, gibbs_trace, gibbs_trace_fidelity = calculate_QSP_metric(u, vdagger, thetas,gibbs)
         traces.append(trace)
         fidelities.append(fidelity)
+        gibbs_traces.append(gibbs_trace)
+        gibbs_trace_fidelities.append(gibbs_trace_fidelity)
     ce = concentratable_entanglement(u.bind_parameters(thetas))
-    return traces, fidelities, ce
+    return traces, fidelities, gibbs_traces, gibbs_trace_fidelities, ce
 
 
-def calculate_QST_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass):
+def calculate_QST_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, gibbs = False):
     traces = []
     fidelities = []
+    gibbs_traces = []
+    gibbs_trace_fidelities = []
     for thetas in thetass:
-        trace, fidelity = calculate_QST_metric(u, vdagger, thetas)
+        trace, fidelity, gibbs_trace, gibbs_trace_fidelity = calculate_QST_metric(u, vdagger, thetas, gibbs)
         traces.append(trace)
         fidelities.append(fidelity)
+        gibbs_traces.append(gibbs_trace)
+        gibbs_trace_fidelities.append(gibbs_trace_fidelity)
 
     ce = concentratable_entanglement(vdagger.bind_parameters(thetas))
-    return traces, fidelities, ce
+    return traces, fidelities, gibbs_traces, gibbs_trace_fidelities, ce
 
 
 def haar_measure(n):
