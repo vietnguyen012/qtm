@@ -1,5 +1,6 @@
 import types, typing
 from qtm.evolution import ecircuit, selection
+from datetime import datetime
 import qtm.random_circuit
 import qtm.state
 import qtm.qcompilation
@@ -21,7 +22,8 @@ class EEnvironment():
             data.crossover_func,
             data.mutate_func,
             data.selection_func,
-            data.pool, data.save_progress)
+            data.pool, 
+            data.file_name)
         file.close()
         return
     def __init__(self, params: typing.Union[typing.Dict, str],
@@ -29,7 +31,8 @@ class EEnvironment():
                  crossover_func: types.FunctionType = None,
                  mutate_func: types.FunctionType = None,
                  selection_func: types.FunctionType = None,
-                 pool = None, save_progress = False) -> None:
+                 pool = None, 
+                 file_name: str = '') -> None:
         """_summary_
 
         Args:
@@ -39,19 +42,21 @@ class EEnvironment():
             mutate_func (types.FunctionType, optional): Defaults to None.
             selection_func (types.FunctionType, optional): Defaults to None.
             pool (_type_, optional): Pool gate. Defaults to None.
-            save_progress (bool, optional): is save progress or not. Defaults to False.
+            file_name (str, optional): Path of saved file.
         """
         if isinstance(params, str):
             file = open(params, 'rb')
             data = pickle.load(file)
             params = data.params
+            self.params = data.params
             self.fitness_func = data.fitness_func
             self.crossover_func = data.crossover_func
             self.mutate_func = data.mutate_func
             self.selection_func = data.selection_func
             self.pool = data.pool
-            self.save_progress = data.save_progress
+            self.file_name = data.file_name
             self.best_candidate = data.best_candidate
+            self.current_generation = data.current_generation
             self.population = data.population
             self.populations = data.populations
             self.best_score_progress = data.best_score_progress
@@ -63,8 +68,9 @@ class EEnvironment():
             self.mutate_func = mutate_func
             self.selection_func = selection_func
             self.pool = pool
-            self.save_progress = save_progress
+            self.file_name = file_name
             self.best_candidate = None
+            self.current_generation = 0
             self.population = []
             self.populations = []
             self.best_score_progress = []
@@ -78,10 +84,23 @@ class EEnvironment():
         return
 
     def evol(self, verbose: int = 1):
+        # Pre-procssing
         if verbose == 1:
             bar = qtm.progress_bar.ProgressBar(
                 max_value=self.num_generation, disable=False)
-        for generation in range(self.num_generation):
+        
+            
+        if self.current_generation == 0:
+            print("Initialize population ...")
+            self.init()
+            print("Start evol progress ...")
+        elif self.current_generation == self.num_generation:
+            return
+        else:
+            print(f"Continute evol progress at generation {self.current_generation} ...")
+        for generation in range(self.current_generation, self.num_generation):
+            print(f"Evol at generation {generation}")
+            self.current_generation += 1
             self.scores_in_loop = []
             new_population = []
             # Selection
@@ -93,28 +112,29 @@ class EEnvironment():
                 new_population.extend([offspring1, offspring2])
                 self.scores_in_loop.extend([offspring1.fitness, offspring2.fitness])
             self.population = new_population
-            if self.save_progress:
-                self.populations.append(self.population)
+            self.populations.append(self.population)
             # Mutate
             for circuit in self.population:
                 if random.random() < self.prob_mutate:
                     self.mutate_func(circuit, self.pool)
 
+            # Post-process
             best_score = np.min(self.scores_in_loop)
             best_index = np.argmin(self.scores_in_loop)
             if self.best_candidate.fitness > self.population[best_index].fitness:
                 self.best_candidate = self.population[best_index]
             self.best_score_progress.append(best_score)
+            self.save(self.file_name + f'ga_{self.fitness_func.__name__}_{datetime.now().strftime("%Y-%m-%d")}.envobj')
             if verbose == 1:
                 bar.update(1)
             if verbose == 2 and generation % 5 == 0:
                 print("Step " + str(generation) + ": " + str(best_score))
             if self.threshold(best_score):
                 break
-        print('End evol progress, percent target: %.1f' % best_score)
+        print('End evol progress, best score ever: %.1f' % best_score)
         return
 
-    def initialize_population(self):
+    def init(self):
         self.population = []
         num_sastify_circuit = 0
         while(num_sastify_circuit <= self.num_circuit):
@@ -132,7 +152,7 @@ class EEnvironment():
         return
 
     def plot(self):
-        plt.plot(self.best_score_progress)
+        plt.plot(list(range(1, self.num_generation + 1)), self.best_score_progress)
         plt.xlabel('No. generation')
         plt.ylabel('Best score')
         plt.show()

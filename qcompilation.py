@@ -180,18 +180,18 @@ class QuantumCompilation():
         self.is_trained = True
         self.thetass, self.loss_values = qtm.base.fit(
             self.u, self.vdagger, self.thetas, self.num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
-        if (len(self.u.parameters)) > 0:
-            self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
-                self.u, self.vdagger, self.thetass, **self.kwargs)
-        else:
-            self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QST_metrics(
-                self.u, self.vdagger, self.thetass, **self.kwargs)
-
+        # if (len(self.u.parameters)) > 0:
+        #     self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
+        #         self.u, self.vdagger, self.thetass, **self.kwargs)
+        # else:
+        #     self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QST_metrics(
+        #         self.u, self.vdagger, self.thetass, **self.kwargs)
+        self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_metrics(
+                 self.u, self.vdagger, self.thetass, **self.kwargs)
         return
 
     def plot(self):
         plt.plot(self.loss_values)
-        
         plt.ylabel("Loss values")
         plt.xlabel('Num. iteration')
         return
