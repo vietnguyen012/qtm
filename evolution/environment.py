@@ -11,7 +11,20 @@ import qtm.progress_bar
 import pickle
 
 class EEnvironment():
-    def __init__(self, params: typing.Union[typing.List, str],
+
+    def __init__(self, file_name: str):
+        file = open(file_name, 'rb')
+        data = pickle.load(file)
+        self.__init__(
+            data.params,
+            data.fitness_func,
+            data.crossover_func,
+            data.mutate_func,
+            data.selection_func,
+            data.pool, data.save_progress)
+        file.close()
+        return
+    def __init__(self, params: typing.Union[typing.Dict, str],
                  fitness_func: types.FunctionType = None,
                  crossover_func: types.FunctionType = None,
                  mutate_func: types.FunctionType = None,
@@ -28,18 +41,34 @@ class EEnvironment():
             pool (_type_, optional): Pool gate. Defaults to None.
             save_progress (bool, optional): is save progress or not. Defaults to False.
         """
-        self.params = params
-        self.fitness_func = fitness_func
-        self.crossover_func = crossover_func
-        self.mutate_func = mutate_func
-        self.selection_func = selection_func
-        self.pool = pool
-        self.save_progress = save_progress
-        self.best_candidate = None
-        self.population = []
-        self.populations = []
-        self.best_score_progress = []
-        self.scores_in_loop = []
+        if isinstance(params, str):
+            file = open(params, 'rb')
+            data = pickle.load(file)
+            params = data.params
+            self.fitness_func = data.fitness_func
+            self.crossover_func = data.crossover_func
+            self.mutate_func = data.mutate_func
+            self.selection_func = data.selection_func
+            self.pool = data.pool
+            self.save_progress = data.save_progress
+            self.best_candidate = data.best_candidate
+            self.population = data.population
+            self.populations = data.populations
+            self.best_score_progress = data.best_score_progress
+            self.scores_in_loop = data.scores_in_loop
+        else:
+            self.params = params
+            self.fitness_func = fitness_func
+            self.crossover_func = crossover_func
+            self.mutate_func = mutate_func
+            self.selection_func = selection_func
+            self.pool = pool
+            self.save_progress = save_progress
+            self.best_candidate = None
+            self.population = []
+            self.populations = []
+            self.best_score_progress = []
+            self.scores_in_loop = []
         self.depth = params['depth']
         self.num_circuit = params['num_circuit']  # Must mod 8 = 0
         self.num_generation = params['num_generation']
@@ -48,25 +77,11 @@ class EEnvironment():
         self.threshold = params['threshold']
         return
 
-    def load_from_file(self, file_name: str):
-        file = open(file_name, 'rb')
-        data = pickle.load(file)
-        self.__init__(
-            data.params,
-            data.fitness_func,
-            data.crossover_func,
-            data.mutate_func,
-            data.selection_func,
-            data.pool, data.save_progress)
-        file.close()
-        return
-    
     def evol(self, verbose: int = 1):
         if verbose == 1:
             bar = qtm.progress_bar.ProgressBar(
                 max_value=self.num_generation, disable=False)
         for generation in range(self.num_generation):
-            print(generation)
             self.scores_in_loop = []
             new_population = []
             # Selection
@@ -96,7 +111,7 @@ class EEnvironment():
                 print("Step " + str(generation) + ": " + str(best_score))
             if self.threshold(best_score):
                 break
-        print('End best score, end evol progress, percent target: %.1f' % best_score)
+        print('End evol progress, percent target: %.1f' % best_score)
         return
 
     def initialize_population(self):
@@ -121,7 +136,7 @@ class EEnvironment():
         plt.xlabel('No. generation')
         plt.ylabel('Best score')
         plt.show()
-        
+        return 
     def save(self, file_name):
         file = open(file_name, 'wb')
         pickle.dump(self, file)

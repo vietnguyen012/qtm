@@ -188,6 +188,7 @@ class QuantumCompilation():
 
     def plot(self):
         plt.plot(self.loss_values)
+        
         plt.ylabel("Loss values")
         plt.xlabel('Num. iteration')
         return
@@ -225,7 +226,7 @@ class QuantumCompilation():
         animator = animation.FuncAnimation(fig, update,
                                     interval=interval, repeat=False)
         animator.save(file_name)
-        return
+        
     def save(self, ansatz, state, file_name):
         if (len(self.u.parameters)) > 0:
             qspobj = qtm.qsp.QuantumStatePreparation.load_from_compiler(
