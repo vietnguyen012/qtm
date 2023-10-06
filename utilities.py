@@ -77,15 +77,6 @@ def concentratable_entanglement(u: qiskit.QuantumCircuit, exact=False):
 
         return 1-counts.get("0"*len(qubit), 0)/qtm.constant.num_shots
 
-def change_basis_to_two_qubit(qc: qiskit.QuantumCircuit):
-    four_qubit_strings = ["0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111"]
-    indices = {"00":0,"01":1,"10":2,"11":3}
-    gibbs_statevector = qiskit.quantum_info.Statevector.from_instruction(qc).data
-    gibbs_density_matrix = np.zeros((4,4),dtype=np.complex128)
-    for i in range(16):
-        gibbs_density_matrix[indices[four_qubit_strings[i][:2]],indices[four_qubit_strings[i][2:]]] = gibbs_statevector[i]
-    return gibbs_density_matrix
-
 def extract_state(qc: qiskit.QuantumCircuit):
     """Get infomation about quantum circuit
 
@@ -161,8 +152,8 @@ def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircui
     rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
     sigma = qiskit.quantum_info.DensityMatrix.from_instruction(vdagger.inverse())
     if gibbs:
-        gibbs_rho = change_basis_to_two_qubit(qc)
-        gibbs_sigma = change_basis_to_two_qubit(vdagger.inverse())
+        gibbs_rho = qiskit.quantum_info.partial_trace(rho,[0,1])
+        gibbs_sigma = qiskit.quantum_info.partial_trace(sigma,[0,1])
     else:
         gibbs_rho = None,
         gibbs_sigma = None
@@ -174,8 +165,8 @@ def calculate_QST_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircui
     qc = vdagger.bind_parameters(thetas).inverse()
     sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
     if gibbs:
-        gibbs_rho = change_basis_to_two_qubit(qc)
-        gibbs_sigma = change_basis_to_two_qubit(vdagger.inverse())
+        gibbs_rho = qiskit.quantum_info.partial_trace(rho,[0,1])
+        gibbs_sigma = qiskit.quantum_info.partial_trace(sigma,[0,1])
     else:
         gibbs_rho = None,
         gibbs_sigma = None
