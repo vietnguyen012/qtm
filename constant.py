@@ -150,9 +150,9 @@ clifford_set = [
 operations = [
     H_gate,
     # S_gate,
-    X_gate,
+    # X_gate,
     # Y_gate,
-    Z_gate,
+    # Z_gate,
     CX_gate,
     RX_gate,
     RY_gate,

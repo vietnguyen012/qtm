@@ -225,6 +225,62 @@ def is_pos_def(matrix, error=1e-8):
 def is_normalized(matrix):
     return np.isclose(np.trace(matrix), 1)
 
+def truncate_circuit(qc: qiskit.QuantumCircuit, selected_depth: int):
+    if qc.depth() <= selected_depth:
+        return 
+    else:
+        qc1, _ = divide_circuit_by_depth(qc, selected_depth)
+        return qc1
+    
+def divide_circuit(qc: qiskit.QuantumCircuit, percent: float) -> typing.List[qiskit.QuantumCircuit]:
+    """Dividing circuit into two sub-circuit
+
+    Args:
+        qc (qiskit.QuantumCircuit)
+        percent (float): from 0 to 1
+
+    Returns:
+        typing.List[qiskit.QuantumCircuit]: two seperated quantum circuits
+    """
+
+    qc1 = qiskit.QuantumCircuit(qc.num_qubits)
+    qc2 = qc1.copy()
+    stop = 0
+    for x in qc:
+        qc1.append(x[0], x[1])
+        stop += 1
+        if qc1.depth() / qc.depth() >= percent:
+            for x in qc[stop:]:
+                qc2.append(x[0], x[1])
+            return qc1, qc2
+    return qc1, qc2
+
+
+def divide_circuit_by_depth(qc: qiskit.QuantumCircuit, depth: int) -> typing.List[qiskit.QuantumCircuit]:
+    """_Dividing circuit into two sub-circuit
+
+    Args:
+        qc (qiskit.QuantumCircuit)
+        depth (int): specific depth value
+
+    Returns:
+        typing.List[qiskit.QuantumCircuit]: two seperated quantum circuits
+    """
+    def look_forward(qc, x):
+        qc.append(x[0],x[1])
+        return qc
+    qc1 = qiskit.QuantumCircuit(qc.num_qubits)
+    qc2 = qc1.copy()
+    stop = 0
+    for i in range(len(qc)):
+        qc1.append(qc[i][0], qc[i][1])
+        stop += 1
+        if qc1.depth() == depth and i + 1 < len(qc) and look_forward(qc1.copy(), qc[i+1]).depth() > depth:
+            for x in qc[stop:]:
+                qc2.append(x[0], x[1])
+            return qc1, qc2
+    return qc1, qc2
+
 def compose_circuit(qcs: typing.List[qiskit.QuantumCircuit]) -> qiskit.QuantumCircuit:
     """Combine list of paramerterized quantum circuit into one. It's very helpful!!!
 

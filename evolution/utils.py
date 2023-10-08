@@ -2,38 +2,9 @@ import typing
 import qiskit
 import random
 import numpy as np
-import qtm.random_circuit
 
 
-def divide_circuit(qc: qiskit.QuantumCircuit, percent) -> qiskit.QuantumCircuit:
-    qc1 = qiskit.QuantumCircuit(qc.num_qubits)
-    qc2 = qc1.copy()
-    stop = 0
-    for x in qc:
-        qc1.append(x[0], x[1])
-        stop += 1
-        if qc1.depth() / qc.depth() >= percent:
-            for x in qc[stop:]:
-                qc2.append(x[0], x[1])
-            return qc1, qc2
-    return qc1, qc2
 
-
-def divide_circuit_by_depth(qc: qiskit.QuantumCircuit, depth) -> qiskit.QuantumCircuit:
-    def look_forward(qc, x):
-        qc.append(x[0],x[1])
-        return qc
-    qc1 = qiskit.QuantumCircuit(qc.num_qubits)
-    qc2 = qc1.copy()
-    stop = 0
-    for i in range(len(qc)):
-        qc1.append(qc[i][0], qc[i][1])
-        stop += 1
-        if qc1.depth() == depth and i + 1 < len(qc) and look_forward(qc1.copy(), qc[i+1]).depth() > depth:
-            for x in qc[stop:]:
-                qc2.append(x[0], x[1])
-            return qc1, qc2
-    return qc1, qc2
 
 
 def fight(population):

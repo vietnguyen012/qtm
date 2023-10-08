@@ -47,6 +47,7 @@ class EEnvironment():
         if isinstance(params, str):
             file = open(params, 'rb')
             data = pickle.load(file)
+            print(data)
             params = data.params
             self.params = data.params
             self.fitness_func = data.fitness_func
@@ -150,9 +151,17 @@ class EEnvironment():
                 self.population.append(circuit)
         self.best_candidate = self.population[0]
         return
-
+    def draw(self, file_name: str = ''):
+        generation = 0
+        for population in self.populations:
+            generation += 1
+            index = 0
+            for circuit in population:
+                index += 1
+                circuit.qc.draw('mpl', file_name = f'{file_name}/{generation}/{index}.png')
+        return
     def plot(self):
-        plt.plot(list(range(1, self.num_generation + 1)), self.best_score_progress)
+        plt.plot(list(range(1, self.current_generation)), self.best_score_progress)
         plt.xlabel('No. generation')
         plt.ylabel('Best score')
         plt.show()

@@ -315,15 +315,14 @@ def WalltoallCNOT(qc: qiskit.QuantumCircuit, limit=0) -> qiskit.QuantumCircuit:
     return qc
 
 
-def Wchain_ZXZlayer_ansatz(num_qubits, num_layers: int = 1) -> qiskit.QuantumCircuit:
-    """_summary_
-
+def Wchain_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1) -> qiskit.QuantumCircuit:
+    """
     Args:
-        num_qubits (_type_): _description_
-        num_layers (int, optional): _description_. Defaults to 1.
+        num_qubits (int)
+        num_layers (int, optional): Defaults to 1.
 
     Returns:
-        _type_: _description_
+        qiskit.QuantumCircuit: parameterized quantum circuit
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
@@ -340,7 +339,15 @@ def Walternating_ZXZlayer_ansatz(num_qubits, num_layers: int = 1) -> qiskit.Quan
     return qc
 
 
-def WalternatingCNOT_ZXZlayer_ansatz(num_qubits, num_layers: int = 1) -> qiskit.QuantumCircuit:
+def WalternatingCNOT_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1) -> qiskit.QuantumCircuit:
+    """
+    Args:
+        num_qubits (int)
+        num_layers (int, optional): Defaults to 1.
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit([qc, WalternatingCNOT(num_qubits),
@@ -348,7 +355,15 @@ def WalternatingCNOT_ZXZlayer_ansatz(num_qubits, num_layers: int = 1) -> qiskit.
     return qc
 
 
-def Walltoall_ZXZlayer_ansatz(num_qubits, num_layers: int = 1, limit=0) -> qiskit.QuantumCircuit:
+def Walltoall_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1, limit=0) -> qiskit.QuantumCircuit:
+    """
+    Args:
+        num_qubits (int)
+        num_layers (int, optional): Defaults to 1.
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """    
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit(
@@ -359,6 +374,16 @@ def Walltoall_ZXZlayer_ansatz(num_qubits, num_layers: int = 1, limit=0) -> qiski
 def WalltoallCNOT_ZXZlayer_ansatz(num_qubits: int = 3,
                                   num_layers: int = 1,
                                   limit=0) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int, optional): _description_. Defaults to 3.
+        num_layers (int, optional): _description_. Defaults to 1.
+        limit (int, optional): _description_. Defaults to 0.
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit(
@@ -367,6 +392,15 @@ def WalltoallCNOT_ZXZlayer_ansatz(num_qubits: int = 3,
 
 
 def zxz_layer(num_qubits: int = 3, num_layers: int = 1) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int, optional): _description_. Defaults to 3.
+        num_layers (int, optional): _description_. Defaults to 1.
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit(
@@ -374,8 +408,16 @@ def zxz_layer(num_qubits: int = 3, num_layers: int = 1) -> qiskit.QuantumCircuit
     return qc
 
 
-def random_ccz_circuit(num_qubits, num_gates) -> qiskit.QuantumCircuit:
-    """Adds a random number of CZ or CCZ gates (up to `max_gates`) to the given circuit."""
+def random_ccz_circuit(num_qubits: int, num_gates: int) -> qiskit.QuantumCircuit:
+    """Adds a random number of CZ or CCZ gates (up to `max_gates`) to the given circuit.
+
+    Args:
+        num_qubits (int): _description_
+        num_gates (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     sure = True if num_gates < 3 else False
     for _ in range(num_gates):
@@ -389,7 +431,15 @@ def random_ccz_circuit(num_qubits, num_gates) -> qiskit.QuantumCircuit:
     return qc
 
 
-def rz_layer(num_qubits) -> qiskit.QuantumCircuit:
+def rz_layer(num_qubits: int) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     thetas = qiskit.circuit.ParameterVector('theta', num_qubits)
     for i in range(num_qubits):
@@ -397,7 +447,15 @@ def rz_layer(num_qubits) -> qiskit.QuantumCircuit:
     return qc
 
 
-def rx_layer(num_qubits) -> qiskit.QuantumCircuit:
+def rx_layer(num_qubits: int) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     thetas = qiskit.circuit.ParameterVector('theta', num_qubits)
     for i in range(num_qubits):
@@ -405,7 +463,15 @@ def rx_layer(num_qubits) -> qiskit.QuantumCircuit:
     return qc
 
 
-def ry_layer(num_qubits) -> qiskit.QuantumCircuit:
+def ry_layer(num_qubits: int) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     thetas = qiskit.circuit.ParameterVector('theta', num_qubits)
     for i in range(num_qubits):
@@ -413,11 +479,20 @@ def ry_layer(num_qubits) -> qiskit.QuantumCircuit:
     return qc
 
 
-def cz_layer(num_qubits) -> qiskit.QuantumCircuit:
+def cz_layer(num_qubits: int) -> qiskit.QuantumCircuit:
     return qiskit.circuit.library.MCMT('z', num_qubits - 1, 1)
 
 
 def g2(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int): _description_
+        num_layers (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     thetas = qiskit.circuit.ParameterVector(
         'theta', 2 * num_qubits * num_layers)
@@ -437,6 +512,15 @@ def g2(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
 
 
 def gn(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        num_qubits (int): _description_
+        num_layers (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit([qc, ry_layer(num_qubits), cz_layer(num_qubits)])
@@ -444,6 +528,15 @@ def gn(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
 
 
 def g2gn(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
+    """g2 + gn ansatz
+
+    Args:
+        num_qubits (int): _description_
+        num_layers (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: parameterized quantum circuit
+    """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
         qc = compose_circuit([qc, g2(num_qubits, 1), gn(num_qubits, 1)])
@@ -458,7 +551,7 @@ def g2gnw(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
         num_layers (int): _description_
 
     Returns:
-        qiskit.QuantumCircuit: _description_
+        qiskit.QuantumCircuit: parameterized quantum circuit
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):

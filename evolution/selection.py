@@ -14,33 +14,33 @@ def elitist_selection(population, num_elitist = 0):
 
 def steady_state_selection(self, fitness, num_parents):
 
-        """
-        Selects the parents using the steady-state selection technique. 
-        This is by sorting the solutions based on the fitness and select the best ones as parents.
-        Later, these parents will mate to produce the offspring.
+    """
+    Selects the parents using the steady-state selection technique. 
+    This is by sorting the solutions based on the fitness and select the best ones as parents.
+    Later, these parents will mate to produce the offspring.
 
-        It accepts 2 parameters:
-            -fitness: The fitness values of the solutions in the current population.
-            -num_parents: The number of parents to be selected.
-        It returns:
-            -An array of the selected parents.
-            -The indices of the selected solutions.
-        """
+    It accepts 2 parameters:
+        -fitness: The fitness values of the solutions in the current population.
+        -num_parents: The number of parents to be selected.
+    It returns:
+        -An array of the selected parents.
+        -The indices of the selected solutions.
+    """
 
-        # Return the indices of the sorted solutions (all solutions in the population).
-        # This function works with both single- and multi-objective optimization problems.
-        fitness_sorted = self.sort_solutions_nsga2(fitness=fitness)
+    # Return the indices of the sorted solutions (all solutions in the population).
+    # This function works with both single- and multi-objective optimization problems.
+    fitness_sorted = self.sort_solutions_nsga2(fitness=fitness)
 
-        # Selecting the best circuits in the current generation as parents for producing the offspring of the next generation.
-        if self.gene_type_single == True:
-            parents = np.empty((num_parents, self.population.shape[1]), dtype=self.gene_type[0])
-        else:
-            parents = np.empty((num_parents, self.population.shape[1]), dtype=object)
+    # Selecting the best circuits in the current generation as parents for producing the offspring of the next generation.
+    if self.gene_type_single == True:
+        parents = np.empty((num_parents, self.population.shape[1]), dtype=self.gene_type[0])
+    else:
+        parents = np.empty((num_parents, self.population.shape[1]), dtype=object)
 
-        for parent_num in range(num_parents):
-            parents[parent_num, :] = self.population[fitness_sorted[parent_num], :].copy()
+    for parent_num in range(num_parents):
+        parents[parent_num, :] = self.population[fitness_sorted[parent_num], :].copy()
 
-        return parents, np.array(fitness_sorted[:num_parents])
+    return parents, np.array(fitness_sorted[:num_parents])
 
 def rank_selection(self, fitness, num_parents):
 
