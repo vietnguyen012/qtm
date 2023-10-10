@@ -1,31 +1,62 @@
-
+import typing
+import numpy as np
 import qiskit
 import scipy
 import qtm.constant
-import numpy as np
-import types
-import typing
 
 
-def save_circuit(qc: qiskit.QuantumCircuit, file_name: typing.ByteString):
+
+def save_circuit(qc: qiskit.QuantumCircuit, file_name: str) -> None:
+    """Save circuit as qpy object
+
+    Args:
+        qc (qiskit.QuantumCircuit): Saved circuit
+        file_name (str): Path
+    """
+
     with open(f"{file_name}.qpy", "wb") as qpy_file_write:
         qiskit.qpy.dump(qc, qpy_file_write)
     return
 
 
-def load_circuit(file_name: typing.ByteString) -> qiskit.QuantumCircuit:
+def load_circuit(file_name: str) -> qiskit.QuantumCircuit:
+    """Load circuit from a specific path
+
+    Args:
+        file_name (str): Path
+
+    Returns:
+        qiskit.QuantumCircuit
+    """
     with open(f"{file_name}.qpy", "rb") as qpy_file_read:
         qc = qiskit.qpy.load(qpy_file_read)[0]
     return qc
 
 
-def unit_vector(i, length):
-    unit_vector = np.zeros((length))
-    unit_vector[i] = 1.0
-    return unit_vector
+def unit_vector(i: int, length: int) -> np.ndarray:
+    """Create vector where a[i] = 1 and a[j] = 0 with j <> i
+
+    Args:
+        i (int): index
+        length (int): dimensional of vector
+
+    Returns:
+        np.ndarray
+    """
+    vector = np.zeros((length))
+    vector[i] = 1.0
+    return vector
 
 
 def parallized_swap_test(u: qiskit.QuantumCircuit):
+    """_summary_
+
+    Args:
+        u (qiskit.QuantumCircuit): _description_
+
+    Returns:
+        _type_: _description_
+    """
     # circuit = qtm.state.create_w_state(5)
     n_qubit = u.num_qubits
     qubits_list_first = list(range(n_qubit, 2*n_qubit))
@@ -57,6 +88,15 @@ def parallized_swap_test(u: qiskit.QuantumCircuit):
 
 
 def concentratable_entanglement(u: qiskit.QuantumCircuit, exact=False):
+    """_summary_
+
+    Args:
+        u (qiskit.QuantumCircuit): _description_
+        exact (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     qubit = list(range(u.num_qubits))
     n = len(qubit)
     cbits = qubit.copy()
@@ -73,10 +113,10 @@ def concentratable_entanglement(u: qiskit.QuantumCircuit, exact=False):
             swap_test_circuit.measure(qubit[i], cbits[i])
 
         counts = qiskit.execute(
-            swap_test_circuit, backend=qtm.constant.backend, shots=qtm.constant.num_shots
+            swap_test_circuit, backend=qtm.constant.backend, shots=qtm.constant.NUM_SHOTS
         ).result().get_counts()
 
-        return 1-counts.get("0"*len(qubit), 0)/qtm.constant.num_shots
+        return 1-counts.get("0"*len(qubit), 0)/qtm.constant.NUM_SHOTS
 
 
 def extract_state(qc: qiskit.QuantumCircuit):
@@ -125,6 +165,15 @@ def trace_fidelity(rho, sigma):
 
 
 def gibbs_trace_fidelity(rho, sigma):
+    """_summary_
+
+    Args:
+        rho (_type_): _description_
+        sigma (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     if rho is None:
         return None
     half_power_sigma = scipy.linalg.fractional_matrix_power(sigma, 1/2)
@@ -133,6 +182,14 @@ def gibbs_trace_fidelity(rho, sigma):
 
 
 def gibbs_trace(rho):
+    """_summary_
+
+    Args:
+        rho (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     if rho is None:
         return None
     return np.trace(np.linalg.matrix_power(rho, 2))
@@ -153,6 +210,17 @@ def get_metrics(rho, sigma, gibbs_rho, gibbs_sigma):
 
 
 def calculate_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas, gibbs=False):
+    """_summary_
+
+    Args:
+        u (qiskit.QuantumCircuit): _description_
+        vdagger (qiskit.QuantumCircuit): _description_
+        thetas (_type_): _description_
+        gibbs (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     if (len(u.parameters)) > 0:
         qc = u.bind_parameters(thetas)
         rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
@@ -175,6 +243,17 @@ def calculate_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, t
     return trace, np.real(fidelity), gibbs_trace, np.real(gibbs_trace_fidelity), ce 
 
 def calculate_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, gibbs=False):
+    """_summary_
+
+    Args:
+        u (qiskit.QuantumCircuit): _description_
+        vdagger (qiskit.QuantumCircuit): _description_
+        thetass (_type_): _description_
+        gibbs (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     traces = []
     fidelities = []
     gibbs_traces = []
@@ -218,18 +297,48 @@ def normalize_matrix(matrix):
     """
     return np.conjugate(np.transpose(matrix)) @ matrix / np.trace(np.conjugate(np.transpose(matrix)) @ matrix)
 
+def softmax(xs, scale_max) -> np.ndarray:
+    exp_xs = np.exp(xs)
+    return 1 + scale_max * exp_xs / np.sum(exp_xs)
 
+    
 def is_pos_def(matrix, error=1e-8):
+    """_summary_
+
+    Args:
+        matrix (_type_): _description_
+        error (_type_, optional): _description_. Defaults to 1e-8.
+
+    Returns:
+        _type_: _description_
+    """
     return np.all(np.linalg.eigvalsh(matrix) > -error)
 
 def is_normalized(matrix):
+    """_summary_
+
+    Args:
+        matrix (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     return np.isclose(np.trace(matrix), 1)
 
-def truncate_circuit(qc: qiskit.QuantumCircuit, selected_depth: int):
+def truncate_circuit(qc: qiskit.QuantumCircuit, selected_depth: int) -> qiskit.QuantumCircuit:
+    """_summary_
+
+    Args:
+        qc (qiskit.QuantumCircuit): _description_
+        selected_depth (int): _description_
+
+    Returns:
+        qiskit.QuantumCircuit: _description_
+    """
     if qc.depth() <= selected_depth:
-        return 
+        return qc
     else:
-        qc1, _ = divide_circuit_by_depth(qc, selected_depth)
+        qc1, qc2 = divide_circuit_by_depth(qc, selected_depth)
         return qc1
     
 def divide_circuit(qc: qiskit.QuantumCircuit, percent: float) -> typing.List[qiskit.QuantumCircuit]:
@@ -269,18 +378,30 @@ def divide_circuit_by_depth(qc: qiskit.QuantumCircuit, depth: int) -> typing.Lis
     def look_forward(qc, x):
         qc.append(x[0],x[1])
         return qc
+    standard_depth = qc.depth()
     qc1 = qiskit.QuantumCircuit(qc.num_qubits)
     qc2 = qc1.copy()
-    stop = 0
-    for i in range(len(qc)):
-        qc1.append(qc[i][0], qc[i][1])
-        stop += 1
-        if qc1.depth() == depth and i + 1 < len(qc) and look_forward(qc1.copy(), qc[i+1]).depth() > depth:
-            for x in qc[stop:]:
-                qc2.append(x[0], x[1])
-            return qc1, qc2
+    if depth < 0:
+        raise "The depth must be >= 0"
+    elif depth == 0:
+        qc2 = qc.copy()
+    elif depth == standard_depth:
+        qc1 = qc.copy()
+    else:
+        stop = 0
+        for i in range(len(qc)):
+            qc1.append(qc[i][0], qc[i][1])
+            stop += 1
+            if qc1.depth() == depth and i + 1 < len(qc) and look_forward(qc1.copy(), qc[i+1]).depth() > depth:
+                for x in qc[stop:]:
+                    qc2.append(x[0], x[1])
+                return qc1, qc2
     return qc1, qc2
 
+def remove_last_gate(qc: qiskit.QuantumCircuit) -> qiskit.QuantumCircuit:
+    if qc.data:  
+        qc.data.pop()  
+    return qc
 def compose_circuit(qcs: typing.List[qiskit.QuantumCircuit]) -> qiskit.QuantumCircuit:
     """Combine list of paramerterized quantum circuit into one. It's very helpful!!!
 

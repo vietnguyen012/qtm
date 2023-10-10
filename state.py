@@ -75,6 +75,19 @@ def create_ghz_state_inverse(num_qubits: int, theta: float = np.pi / 2):
     qc.ry(-theta, 0)
     return qc
 
+def create_specific_state(num_qubits: int, state):
+    """Create a random Haar quantum state
+
+    Args:
+        num_qubits (int): number of qubits
+
+    Returns:
+        qiskit.QuantumCircuit
+    """
+    qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
+    state = state / np.linalg.norm(state)
+    qc.prepare_state(state, list(range(0, num_qubits)))
+    return qc
 def create_haar_state(num_qubits: int):
     """Create a random Haar quantum state
 

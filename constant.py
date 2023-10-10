@@ -1,3 +1,5 @@
+
+import logging
 import qiskit
 import numpy as np
 from qiskit.circuit.library.standard_gates import (IGate, U1Gate, U2Gate, U3Gate, XGate,
@@ -8,16 +10,16 @@ from qiskit.circuit.library.standard_gates import (IGate, U1Gate, U2Gate, U3Gate
                                                    CCXGate, CSwapGate)
 
 # Training hyperparameter
-num_shots = 10000
-learning_rate = 0.1
-noise_prob = 0.0 # [0, 1]
-gamma = 0.7 # learning rate decay rate
-delta = 0.01 # minimum change value of loss value
-discounting_factor = 0.3 # [0, 1]
+NUM_SHOTS = 10000
+LEARNING_RATE = 0.1
+NOISE_PROB = 0.0  # [0, 1]
+GAMMA = 0.7  # learning rate decay rate
+DELTA = 0.01  # minimum change value of loss value
+DISCOUNTING_FACTOR = 0.3  # [0, 1]
 backend = qiskit.Aer.get_backend('qasm_simulator')
 
 # Logger
-import logging
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -30,15 +32,26 @@ two_term_psr = {
 
 four_term_psr = {
     'alpha': np.pi / 2,
-    'beta' : 3 * np.pi / 2,
-    'd_plus' : (np.sqrt(2) + 1) / (4*np.sqrt(2)),
+    'beta': 3 * np.pi / 2,
+    'd_plus': (np.sqrt(2) + 1) / (4*np.sqrt(2)),
     'd_minus': (np.sqrt(2) - 1) / (4*np.sqrt(2))
 }
 
 one_qubit_gates = ["Hadamard", 'RX', 'RY', 'RZ']
 two_qubits_gates = ['CNOT', 'CY', 'CZ', 'CRX', 'CRY', 'CRZ']
 
-def create_gate_pool(num_qubits, one_qubit_gates = one_qubit_gates, two_qubits_gates = two_qubits_gates):
+
+def create_gate_pool(num_qubits, one_qubit_gates=one_qubit_gates, two_qubits_gates=two_qubits_gates):
+    """_summary_
+
+    Args:
+        num_qubits (_type_): _description_
+        one_qubit_gates (_type_, optional): _description_. Defaults to one_qubit_gates.
+        two_qubits_gates (_type_, optional): _description_. Defaults to two_qubits_gates.
+
+    Returns:
+        _type_: _description_
+    """
     gate_pool = []
 
     # Single-qubit gates
@@ -56,6 +69,7 @@ def create_gate_pool(num_qubits, one_qubit_gates = one_qubit_gates, two_qubits_g
                     gate_pool.append((gate, qubit1, qubit2))
 
     return gate_pool
+
 
 # For QNG
 generator = {
@@ -123,7 +137,6 @@ look_up_operator = {
 }
 
 
-
 H_gate = {'name': 'h', 'operation': HGate, 'num_op': 1, 'num_params': 0}
 S_gate = {'name': 's', 'operation': SGate, 'num_op': 1, 'num_params': 0}
 X_gate = {'name': 'x', 'operation': XGate, 'num_op': 1, 'num_params': 0}
@@ -143,7 +156,7 @@ clifford_set = [
     H_gate,
     CX_gate,
     S_gate
-    
+
 ]
 
 
@@ -163,10 +176,9 @@ operations = [
 ]
 
 
-
-one_q_ops_name = ['h','rx','ry','rz', 'cx']
+one_q_ops_name = ['h', 'rx', 'ry', 'rz', 'cx']
 one_q_ops = [HGate, RXGate, RYGate, RZGate]
-one_param_name = ['rx','ry','rz']
+one_param_name = ['rx', 'ry', 'rz']
 one_param = [RXGate, RYGate, RZGate]
 two_param_name = ['u2']
 two_param = [U2Gate]
@@ -175,18 +187,3 @@ three_param_name = ['u3']
 three_param = [U3Gate]
 three_q_ops_name = ['ccx']
 three_q_ops = [CCXGate]
-
-# one_q_ops = [IGate, U1Gate, U2Gate, U3Gate, XGate, YGate, ZGate, HGate, SGate, SdgGate, TGate, TdgGate, RXGate, RYGate, RZGate]
-# two_q_ops = [CXGate, CYGate, CZGate, CHGate, CRZGate,
-#              CU1Gate, CU3Gate, SwapGate, RZZGate]
-# one_q_ops = [RXGate, RYGate, RZGate]
-
-
-# one_q_ops = [XGate, YGate, ZGate, HGate, RXGate, RYGate, RZGate]
-
-# one_param = [U1Gate, RXGate, RYGate, RZGate, RZZGate, CU1Gate, CRZGate]
-# two_param = [U2Gate]
-# three_param = [U3Gate, CU3Gate]
-
-# two_q_ops = [CXGate, CRZGate]
-# three_q_ops = [CCXGate, CSwapGate]

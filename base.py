@@ -8,10 +8,9 @@ import qtm.fubini_study
 import qtm.psr
 import numpy as np
 import types
-import typing
 import qtm.constant
 import qtm.early_stopping
-global thetas_1
+
 
 
 def measure(qc: qiskit.QuantumCircuit, qubits, cbits=[]):
@@ -33,12 +32,12 @@ def measure(qc: qiskit.QuantumCircuit, qubits, cbits=[]):
     for i in range(0, n):
         qc.measure(qubits[i], cbits[i])
     # qc.measure_all() # 
-    if qtm.constant.noise_prob > 0:
+    if qtm.constant.NOISE_PROB > 0:
         noise_model = qtm.noise.generate_noise_model(
-            n, qtm.constant.noise_prob)
+            n, qtm.constant.NOISE_PROB)
         results = qiskit.execute(qc, backend=qtm.constant.backend,
                                  noise_model=noise_model,
-                                 shots=qtm.constant.num_shots).result()
+                                 shots=qtm.constant.NUM_SHOTS).result()
         # Raw counts
         counts = results.get_counts()
         # Mitigating noise based on https://qiskit.org/textbook/ch-quantum-hardware/measurement-error-mitigation.html
@@ -49,9 +48,9 @@ def measure(qc: qiskit.QuantumCircuit, qubits, cbits=[]):
     else:
         counts = qiskit.execute(
             qc, backend=qtm.constant.backend,
-            shots=qtm.constant.num_shots).result().get_counts()
+            shots=qtm.constant.NUM_SHOTS).result().get_counts()
 
-    return counts.get("0" * len(qubits), 0) / qtm.constant.num_shots
+    return counts.get("0" * len(qubits), 0) / qtm.constant.NUM_SHOTS
 
 
 def x_measurement(qc: qiskit.QuantumCircuit, qubits, cbits=[]):

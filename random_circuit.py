@@ -1,6 +1,7 @@
 import numpy as np
 import qiskit
 import qtm.constant
+import qtm.utilities
 import random
 
 def initialize_random_parameters(num_qubits: int, max_operands: int, conditional: bool, seed):
@@ -66,7 +67,6 @@ def generate(num_qubits, depth, max_operands=3,
                    conditional=False, seed=None):
 
     qr, qc, rng, thetas = initialize_random_parameters(num_qubits, max_operands, conditional, seed)
-    
     thetas_length = 0
     for _ in range(depth):
         # choose either 1, 2, or 3 qubits for the operation

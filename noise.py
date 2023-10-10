@@ -45,12 +45,21 @@ def generate_noise_model(num_qubit: int, error_prob: float):
 
 
 def generate_measurement_filter(num_qubits, noise_model):
+    """_summary_
+
+    Args:
+        num_qubits (_type_): _description_
+        noise_model (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     # for running measurement error mitigation
     meas_cals, state_labels = complete_meas_cal(qubit_list=range(
         num_qubits), qr=qiskit.QuantumRegister(num_qubits))
     # Execute the calibration circuits
     job = qiskit.execute(meas_cals, backend=qtm.constant.backend,
-                         shots=qtm.constant.num_shots, noise_model=noise_model)
+                         shots=qtm.constant.NUM_SHOTS, noise_model=noise_model)
     cal_results = job.result()
     # Make a calibration matrix
     meas_filter = CompleteMeasFitter(cal_results, state_labels).filter

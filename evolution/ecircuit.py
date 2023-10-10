@@ -12,6 +12,7 @@ class ECircuit():
         self.qc = qc
         self.fitness_func = fitness_func
         self.fitness = 0
+        self.strength_point = 0
         self.compile()
         return
     def compile(self):

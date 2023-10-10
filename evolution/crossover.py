@@ -1,10 +1,10 @@
 import qtm.utilities
-from qtm.evolution import utils
+import numpy as np
 from .ecircuit import ECircuit
-import qiskit
 
 
-def onepoint_crossover(circuit1: ECircuit, circuit2: ECircuit, percent: float = None, is_truncate=True):
+def onepoint_crossover(circuit1: ECircuit, circuit2: ECircuit, 
+                       percent: float = None, is_truncate=False):
     """Cross over between two circuits and create 2 offsprings
 
     Args:
@@ -15,15 +15,22 @@ def onepoint_crossover(circuit1: ECircuit, circuit2: ECircuit, percent: float = 
     """
     # If percent is not produced, dividing base on how strong of father's fitness.
     standard_depth = circuit1.qc.depth()
+    strength_point_circuit1 = np.round(circuit1.strength_point)
     standard_fitness_func = circuit1.fitness_func
+    # if percent is None:
+    #     percent = 1 - circuit1.fitness / (circuit1.fitness + circuit2.fitness)
     if percent is None:
-        percent = 1 - circuit1.fitness / (circuit1.fitness + circuit2.fitness)
-    sub11, sub12 = qtm.utilities.divide_circuit_by_depth(
-        circuit1.qc, int(percent*standard_depth))
-    sub21, sub22 = qtm.utilities.divide_circuit_by_depth(
-        circuit2.qc, int((1 - percent) * standard_depth))
-    combined_qc1 = qtm.utilities.compose_circuit([sub11, sub22])
-    combined_qc2 = qtm.utilities.compose_circuit([sub21, sub12])
+        percent_point = strength_point_circuit1/standard_depth
+    print(percent_point)
+    if percent_point > 0.99:
+        combined_qc1, combined_qc2 = circuit1.qc.copy(), circuit1.qc.copy()
+    else:
+        sub11, sub12 = qtm.utilities.divide_circuit_by_depth(
+            circuit1.qc, strength_point_circuit1)
+        sub21, sub22 = qtm.utilities.divide_circuit_by_depth(
+            circuit2.qc, strength_point_circuit1)
+        combined_qc1 = qtm.utilities.compose_circuit([sub11, sub22])
+        combined_qc2 = qtm.utilities.compose_circuit([sub21, sub12])
     if is_truncate:
         combined_qc1 = qtm.utilities.truncate_circuit(
             combined_qc1, standard_depth)

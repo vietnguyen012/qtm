@@ -10,7 +10,7 @@ def sgd(thetas: np.ndarray, grad_loss: np.ndarray):
     Returns:
         - np.ndarray: new params
     """
-    thetas -= qtm.constant.learning_rate * grad_loss
+    thetas -= qtm.constant.LEARNING_RATE * grad_loss
     return thetas
 
 
@@ -35,7 +35,7 @@ def adam(thetas: np.ndarray, m: np.ndarray, v: np.ndarray, iteration: int,
         v[i] = beta2 * v[i] + (1 - beta2) * grad_loss[i]**2
         mhat = m[i] / (1 - beta1**(iteration + 1))
         vhat = v[i] / (1 - beta2**(iteration + 1))
-        thetas[i] -= qtm.constant.learning_rate * mhat / (np.sqrt(vhat) +
+        thetas[i] -= qtm.constant.LEARNING_RATE * mhat / (np.sqrt(vhat) +
                                                           epsilon)
     return thetas
 
@@ -50,7 +50,7 @@ def qng_fubini_study_hessian(thetas: np.ndarray, G: np.ndarray, grad_loss: np.nd
     Returns:
         - np.ndarray: parameters after update
     """
-    thetas = np.real(thetas - qtm.constant.learning_rate *
+    thetas = np.real(thetas - qtm.constant.LEARNING_RATE *
                      (np.linalg.inv(G) @ grad_loss))
     return thetas
 
@@ -65,7 +65,7 @@ def qng_fubini_study(thetas: np.ndarray, G: np.ndarray, grad_loss: np.ndarray):
     Returns:
         - np.ndarray: parameters after update
     """
-    thetas = np.real(thetas - qtm.constant.learning_rate *
+    thetas = np.real(thetas - qtm.constant.LEARNING_RATE *
                      (np.linalg.inv(G) @ grad_loss))
     return thetas
 
@@ -80,7 +80,7 @@ def qng_fubini_study_scheduler(thetas: np.ndarray, G: np.ndarray, grad_loss: np.
     Returns:
         - np.ndarray: parameters after update
     """
-    lr = qtm.constant.learning_rate * qtm.constant.gamma ** round(iter / 30)
+    lr = qtm.constant.LEARNING_RATE * qtm.constant.GAMMA ** round(iter / 30)
     thetas = np.real(thetas - lr * ((np.linalg.inv(G) @ grad_loss)))
     return thetas
 
@@ -104,7 +104,7 @@ def qng_qfim(thetas: np.ndarray, psi: np.ndarray, grad_psi: np.ndarray,
         inverse_F = np.identity(F.shape[0])
     else:
         inverse_F = np.linalg.inv(F)
-    thetas -= qtm.constant.learning_rate * (inverse_F @ grad_loss)
+    thetas -= qtm.constant.LEARNING_RATE * (inverse_F @ grad_loss)
     return thetas
 
 
