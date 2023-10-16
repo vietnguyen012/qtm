@@ -1,6 +1,159 @@
 import qiskit, numpy as np
-import qtm.gate, qtm.encoding
+import qtm.encoding
 from qiskit.quantum_info import SparsePauliOp
+
+"""
+Function to load classical data in a quantum device
+This code is copy from https://github.com/adjs/dcsp/blob/master/encoding.py
+"""
+class bin_tree:
+    size = None
+    values = None
+
+    def __init__(self, values):
+        self.size = len(values)
+        self.values = values
+
+    def parent(self, key):
+        return int((key - 0.5) / 2)
+
+    def left(self, key):
+        return int(2 * key + 1)
+
+    def right(self, key):
+        return int(2 * key + 2)
+
+    def root(self):
+        return 0
+
+    def __getitem__(self, key):
+        return self.values[key]
+
+
+class Encoding:
+    qcircuit = None
+    quantum_data = None
+    classical_data = None
+    num_qubits = None
+    tree = None
+    output_qubits = []
+
+    def __init__(self, input_vector, encode_type='amplitude_encoding'):
+        if encode_type == 'amplitude_encoding':
+            self.amplitude_encoding(input_vector)
+
+    @staticmethod
+    def _recursive_compute_beta(input_vector, betas):
+        if len(input_vector) > 1:
+            new_x = []
+            beta = []
+            for k in range(0, len(input_vector), 2):
+                norm = np.sqrt(input_vector[k]**2 + input_vector[k + 1]**2)
+                new_x.append(norm)
+                if norm == 0:
+                    beta.append(0)
+                else:
+                    if input_vector[k] < 0:
+                        beta.append(
+                            2 * np.pi - 2 *
+                            np.arcsin(input_vector[k + 1] / norm))  # testing
+                    else:
+                        beta.append(2 * np.arcsin(input_vector[k + 1] / norm))
+            Encoding._recursive_compute_beta(new_x, betas)
+            betas.append(beta)
+
+    @staticmethod
+    def _index(k, circuit, control_qubits, numberof_controls):
+        binary_index = '{:0{}b}'.format(k, numberof_controls)
+        for j, qbit in enumerate(control_qubits):
+            if binary_index[j] == '1':
+                circuit.x(qbit)
+
+    def amplitude_encoding(self, input_vector):
+        """
+        load real vector x to the amplitude of a quantum state
+        """
+        self.num_qubits = int(np.log2(len(input_vector)))
+        self.quantum_data = qiskit.QuantumRegister(self.num_qubits)
+        self.qcircuit = qiskit.QuantumCircuit(self.quantum_data)
+        newx = np.copy(input_vector)
+        betas = []
+        Encoding._recursive_compute_beta(newx, betas)
+        self._generate_circuit(betas, self.qcircuit, self.quantum_data)
+
+    def _generate_circuit(self, betas, qcircuit, quantum_input):
+        numberof_controls = 0  # number of controls
+        control_bits = []
+        for angles in betas:
+            if numberof_controls == 0:
+                qcircuit.ry(angles[0], quantum_input[self.num_qubits - 1])
+                numberof_controls += 1
+                control_bits.append(quantum_input[self.num_qubits - 1])
+            else:
+                for k, angle in enumerate(reversed(angles)):
+                    Encoding._index(k, qcircuit, control_bits,
+                                    numberof_controls)
+
+                    qcircuit.mcry(angle,
+                                  control_bits,
+                                  quantum_input[self.num_qubits - 1 -
+                                                numberof_controls],
+                                  None,
+                                  mode='noancilla')
+
+                    Encoding._index(k, qcircuit, control_bits,
+                                    numberof_controls)
+                control_bits.append(quantum_input[self.num_qubits - 1 -
+                                                  numberof_controls])
+                numberof_controls += 1
+
+
+def cf(qc: qiskit.QuantumCircuit, theta: float, qubit1: int, qubit2: int):
+    """Add Controlled-F gate to quantum circuit
+
+    Args:
+        - qc (qiskit.QuantumCircuit): ddded circuit
+        - theta (float): arccos(1/sqrt(num_qubits), base on number of qubit
+        - qubit1 (int): control qubit
+        - qubit2 (int): target qubit
+
+    Returns:
+        - qiskit.QuantumCircuit: Added circuit
+    """
+    cf = qiskit.QuantumCircuit(2)
+    u = np.array([[1, 0, 0, 0], [0, np.cos(theta), 0,
+                                 np.sin(theta)], [0, 0, 1, 0],
+                  [0, np.sin(theta), 0, -np.cos(theta)]])
+    cf.unitary(u, [0, 1])
+    cf_gate = cf.to_gate(label='CF')
+    qc.append(cf_gate, [qubit1, qubit2])
+    return qc
+
+
+def w3(circuit: qiskit.QuantumCircuit, qubit: int):
+    """Create W state for 3 qubits
+
+    Args:
+        - circuit (qiskit.QuantumCircuit): added circuit
+        - qubit (int): the index that w3 circuit acts on
+
+    Returns:
+        - qiskit.QuantumCircuit: added circuit
+    """
+    qc = qiskit.QuantumCircuit(3)
+    theta = np.arccos(1 / np.sqrt(3))
+    qc.cf(theta, 0, 1)
+    qc.cx(1, 0)
+    qc.ch(1, 2)
+    qc.cx(2, 1)
+    w3 = qc.to_gate(label='w3')
+    # Add the gate to your circuit which is passed as the first argument to cf function:
+    circuit.append(w3, [qubit, qubit + 1, qubit + 2])
+    return circuit
+
+
+qiskit.QuantumCircuit.w3 = w3
+qiskit.QuantumCircuit.cf = cf
 
 def w(qc: qiskit.QuantumCircuit, num_qubits: int, shift: int = 0):
     """The below codes is implemented from [this paper](https://arxiv.org/abs/1606.09290)

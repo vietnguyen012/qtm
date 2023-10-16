@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qtm.evolution import ecircuit, selection
 import qtm.random_circuit
-import qtm.progress_bar
 import qtm.utilities
 
 class EEnvironment():
@@ -98,7 +97,7 @@ class EEnvironment():
     def evol(self, verbose: int = 1):
         # Pre-procssing
         if verbose == 1:
-            bar = qtm.progress_bar.ProgressBar(
+            bar = qtm.utilities.ProgressBar(
                 max_value=self.num_generation, disable=False)
         
             

@@ -3,8 +3,39 @@ import qiskit
 import numpy as np
 import qtm.constant
 import qtm.utilities
+import qtm.measure
 import typing
 import scipy
+
+
+def single_2term_psr(qc: qiskit.QuantumCircuit, thetas: np.ndarray, i, **kwargs):
+    thetas1, thetas2 = thetas.copy(), thetas.copy()
+    thetas1[i] += qtm.constant.two_term_psr['s']
+    thetas2[i] -= qtm.constant.two_term_psr['s']
+
+    qc1 = qc.bind_parameters(thetas1)
+    qc2 = qc.bind_parameters(thetas2)
+    return -qtm.constant.two_term_psr['r'] * (
+        qtm.measure.measure(qc1, list(range(qc1.num_qubits))) -
+        qtm.measure.measure(qc2, list(range(qc2.num_qubits))))
+
+
+def single_4term_psr(qc: qiskit.QuantumCircuit, thetas: np.ndarray, i, **kwargs):
+    thetas1, thetas2 = thetas.copy(), thetas.copy()
+    thetas3, thetas4 = thetas.copy(), thetas.copy()
+    thetas1[i] += qtm.constant.four_term_psr['alpha']
+    thetas2[i] -= qtm.constant.four_term_psr['alpha']
+    thetas3[i] += qtm.constant.four_term_psr['beta']
+    thetas4[i] -= qtm.constant.four_term_psr['beta']
+    qc1 = qc.bind_parameters(thetas1)
+    qc2 = qc.bind_parameters(thetas2)
+    qc3 = qc.bind_parameters(thetas3)
+    qc4 = qc.bind_parameters(thetas4)
+    return - (qtm.constant.four_term_psr['d_plus'] * (
+        qtm.measure.measure(qc1, list(range(qc1.num_qubits))) -
+        qtm.measure.measure(qc2, list(range(qc2.num_qubits)))) - qtm.constant.four_term_psr['d_minus'] * (
+        qtm.measure.measure(qc3, list(range(qc3.num_qubits))) -
+        qtm.measure.measure(qc4, list(range(qc4.num_qubits)))))
 
 
 def grad_loss(qc: qiskit.QuantumCircuit, thetas: np.ndarray):
@@ -27,10 +58,10 @@ def grad_loss(qc: qiskit.QuantumCircuit, thetas: np.ndarray):
     for i in range(0, len(thetas)):
         if index_list[i] == 0:
             # In equation (13)
-            grad_loss[i] = qtm.psr.single_2term_psr(qc, thetas, i)
+            grad_loss[i] = single_2term_psr(qc, thetas, i)
         if index_list[i] == 1:
             # In equation (14)
-            grad_loss[i] = qtm.psr.single_4term_psr(qc, thetas, i)
+            grad_loss[i] = single_4term_psr(qc, thetas, i)
     return grad_loss
 
 
@@ -161,7 +192,7 @@ def qng_hessian(uvdagger: qiskit.QuantumCircuit, thetas: np.ndarray):
         qc = uvdagger.bind_parameters(thetas)
         qc_reverse = uvdagger.bind_parameters(thetas_origin).inverse()
         qc = qc.compose(qc_reverse)
-        return qtm.base.measure(qc, list(range(qc.num_qubits)))
+        return qtm.measure.measure(qc, list(range(qc.num_qubits)))
     G = [[0 for _ in range(length)] for _ in range(length)]
     for i in range(0, length):
         for j in range(0, length):

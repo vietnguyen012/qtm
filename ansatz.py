@@ -1,7 +1,7 @@
 import qiskit
 import math
 from qtm.utilities import compose_circuit
-import qtm.base
+import qtm.measure
 import qtm.state
 import numpy as np
 import random

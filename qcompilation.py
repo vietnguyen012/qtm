@@ -1,4 +1,5 @@
-import qtm.base
+import qtm.measure
+import qtm.gradient
 import qtm.optimizer
 import qtm.loss
 import qtm.utilities
@@ -10,7 +11,6 @@ import typing
 import types
 import qiskit
 import matplotlib.pyplot as plt
-import pickle
 
 
 class QuantumCompilation():
@@ -207,7 +207,7 @@ class QuantumCompilation():
             _type_: _description_
         """
         if verbose == 1:
-            bar = qtm.progress_bar.ProgressBar(max_value=num_steps, disable=False)
+            bar = qtm.utilities.ProgressBar(max_value=num_steps, disable=False)
         uvaddager = self.u.compose(self.vdagger)
         for i in range(0, num_steps):
             grad_loss = qtm.gradient.grad_loss(uvaddager, self.thetas)
@@ -223,7 +223,7 @@ class QuantumCompilation():
                 self.thetas = qtm.optimizer.adam(self.thetas, m, v1, i, grad_loss)
 
             elif 'qng' in optimizer_name:
-                grad_psi1 = qtm.base.grad_psi(uvaddager, self.thetas,
+                grad_psi1 = qtm.measure.grad_psi(uvaddager, self.thetas,
                                             r=1 / 2,
                                             s=np.pi)
                 qc_binded = uvaddager.bind_parameters(self.thetas)
@@ -255,7 +255,7 @@ class QuantumCompilation():
             
             qc_binded = uvaddager.bind_parameters(self.thetas)
             loss = self.loss_func(
-                qtm.base.measure(qc_binded, list(range(self.u.num_qubits))))
+                qtm.measure.measure(qc_binded, list(range(self.u.num_qubits))))
             self.loss_values.append(loss)
             self.thetass.append(self.thetas.copy())
             if verbose == 1:

@@ -1,21 +1,16 @@
 
 import qiskit
-import scipy
 import qtm.constant
 import numpy as np
-import types
 import pennylane as qml
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import random
-from sklearn.preprocessing import MinMaxScaler
 torch.manual_seed(1000)
 torch.cuda.manual_seed(1000)
 np.random.seed(1000)
 random.seed(1000)
-
-
 
 def convert_string_to_int(string):
     return sum([ord(char) - 65 for char in string])
