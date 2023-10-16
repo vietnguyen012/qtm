@@ -2,6 +2,7 @@ import qtm.base
 import qtm.optimizer
 import qtm.loss
 import qtm.utilities
+import qtm.metric
 import qtm.qst
 import qtm.qsp
 import numpy as np
@@ -22,11 +23,11 @@ class QuantumCompilation():
         self.thetas = None
         self.thetass = []
         self.loss_values = []
-        self.fidelities = []
-        self.traces = []
+        self.compilation_fidelities = []
+        self.compilation_traces = []
         self.gibbs_fidelities = []
         self.gibbs_traces = []
-        self.ce = None
+        self.ces = None
         self.kwargs = None
         self.is_evolutional = False
         self.num_steps = 0
@@ -49,6 +50,17 @@ class QuantumCompilation():
         self.set_loss_func(loss_func)
         self.set_kwargs(**kwargs)
         self.set_thetas(thetas)
+        self.thetass = []
+        self.loss_values = []
+        self.compilation_fidelities = []
+        self.compilation_traces = []
+        self.gibbs_fidelities = []
+        self.gibbs_traces = []
+        self.ces = None
+        self.kwargs = None
+        self.is_evolutional = False
+        self.num_steps = 0
+        self.gibbs = False
         return
 
     def set_u(self, _u: qiskit.QuantumCircuit):
@@ -141,7 +153,7 @@ class QuantumCompilation():
             self.num_steps = _num_steps
         else:
             raise ValueError(
-                'Number of iterations must be a integer, such that 10 or 100.')
+                'Number of iterations must be an integer, take example: 10 or 100.')
         return
 
     def set_thetas(self, _thetas: np.ndarray):
@@ -163,13 +175,13 @@ class QuantumCompilation():
         self.kwargs = kwargs
         return
 
-    def fit(self, num_steps: int = 100, verbose: int = 0):
+    def fit(self, num_steps: int = 100, metrics: typing.List[str] = 'compilation', verbose: int = 0):
         """Optimize the thetas parameters
 
         Args:
             - num_steps: number of iterations
             - verbose (int, optional): 0, 1, or 2. Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per 10 steps. Verbose 1 is good for timing training time, verbose 2 if you want to log loss values to a file. Please install package tdqm if you want to use verbose 1. 
-
+            - metrics (List[str]): list of metric name that you want, take example, ['compilation', 'gibbs']
         """
         self.num_steps = num_steps
         if len(self.thetas) == 0:
@@ -178,16 +190,89 @@ class QuantumCompilation():
             else:
                 self.thetas = np.ones(len(self.vdagger.parameters))
         self.is_trained = True
-        self.thetass, self.loss_values = qtm.base.fit(
-            self.u, self.vdagger, self.thetas, self.num_steps, self.loss_func, self.optimizer, verbose, is_return_all_thetas=True, **self.kwargs)
-        # if (len(self.u.parameters)) > 0:
-        #     self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QSP_metrics(
-        #         self.u, self.vdagger, self.thetass, **self.kwargs)
-        # else:
-        #     self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_QST_metrics(
-        #         self.u, self.vdagger, self.thetass, **self.kwargs)
-        self.traces, self.fidelities, self.gibbs_traces, self.gibbs_fidelities, self.ce = qtm.utilities.calculate_metrics(
-                 self.u, self.vdagger, self.thetass, **self.kwargs)
+        
+        """Return the new thetas that fit with the circuit from create_u_func function
+
+        Args:
+            u (qiskit.QuantumCircuit): _description_
+            vdagger (qiskit.QuantumCircuit): _description_
+            thetas (np.ndarray): _description_
+            num_steps (int): _description_
+            loss_func (types.FunctionType): _description_
+            optimizer (types.FunctionType): _description_
+            verbose (int, optional): _description_. Defaults to 0.
+            is_return_all_thetas (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        if verbose == 1:
+            bar = qtm.progress_bar.ProgressBar(max_value=num_steps, disable=False)
+        uvaddager = self.u.compose(self.vdagger)
+        for i in range(0, num_steps):
+            grad_loss = qtm.gradient.grad_loss(uvaddager, self.thetas)
+            optimizer_name = self.optimizer.__name__
+
+            if optimizer_name == 'sgd':
+                self.thetas = qtm.optimizer.sgd(self.thetas, grad_loss)
+
+            elif optimizer_name == 'adam':
+                if i == 0:
+                    m, v1 = list(np.zeros(self.thetas.shape[0])), list(
+                        np.zeros(self.thetas.shape[0]))
+                self.thetas = qtm.optimizer.adam(self.thetas, m, v1, i, grad_loss)
+
+            elif 'qng' in optimizer_name:
+                grad_psi1 = qtm.base.grad_psi(uvaddager, self.thetas,
+                                            r=1 / 2,
+                                            s=np.pi)
+                qc_binded = uvaddager.bind_parameters(self.thetas)
+                psi = qiskit.quantum_info.Statevector.from_instruction(qc_binded).data
+                psi = np.expand_dims(psi, 1)
+                if optimizer_name == 'qng_fubini_study':
+                    G = qtm.gradient.qng(uvaddager)
+                    self.thetas = qtm.optimizer.qng_fubini_study(thetas, G, grad_loss)
+                if optimizer_name == 'qng_fubini_hessian':
+                    G = qtm.gradient.qng_hessian(uvaddager)
+                    self.thetas = qtm.optimizer.qng_fubini_study(self.thetas, G, grad_loss)
+                if optimizer_name == 'qng_fubini_study_scheduler':
+                    G = qtm.gradient.qng(uvaddager)
+                    self.thetas = qtm.optimizer.qng_fubini_study_scheduler(
+                        self.thetas, G, grad_loss, i)
+                if optimizer_name == 'qng_qfim':
+
+                    self.thetas = qtm.optimizer.qng_qfim(
+                        self.thetas, psi, grad_psi1, grad_loss)
+
+                if optimizer_name == 'qng_adam':
+                    if i == 0:
+                        m, v1 = list(np.zeros(thetas.shape[0])), list(
+                            np.zeros(thetas.shape[0]))
+                    self.thetas = qtm.optimizer.qng_adam(
+                        self.thetas, m, v1, i, psi, grad_psi1, grad_loss)
+            else:
+                thetas = self.optimizer(self.thetas, grad_loss)
+            
+            qc_binded = uvaddager.bind_parameters(self.thetas)
+            loss = self.loss_func(
+                qtm.base.measure(qc_binded, list(range(self.u.num_qubits))))
+            self.loss_values.append(loss)
+            self.thetass.append(self.thetas.copy())
+            if verbose == 1:
+                bar.update(1)
+            if verbose == 2 and i % 10 == 0:
+                print("Step " + str(i) + ": " + str(loss))
+
+        if verbose == 1:
+            bar.close()
+
+        metric_params = [self.u, self.vdagger, self.thetass]
+        if 'compilation' in metrics:
+            self.compilation_traces, self.compilation_fidelities = qtm.metric.calculate_compilation_metrics(*metric_params)
+        if 'gibbs' in metrics:
+            self.gibbs_traces, self.gibbs_fidelities = qtm.metric.calculate_gibbs_metrics(*metric_params)
+        if 'ce' in metrics:
+            self.ces = qtm.metric.calculate_ce_metrics(*metric_params)
         return
 
     def plot(self):
@@ -200,8 +285,8 @@ class QuantumCompilation():
         import matplotlib.animation as animation
         x = np.linspace(0, int(self.num_steps), int(self.num_steps))
         y1 = self.loss_values
-        y2 = self.fidelities
-        y3 = self.traces
+        y2 = self.compilation_fidelities
+        y3 = self.compilation_traces
         fig, ax = plt.subplots()
         ax.set_xlim(int(-self.num_steps*0.05), int(self.num_steps*1.05))
         ax.set_ylim(-0.05, 1.05)
@@ -232,14 +317,18 @@ class QuantumCompilation():
         
     def save(self, ansatz, state, file_name):
         if (len(self.u.parameters)) > 0:
-            qspobj = qtm.qsp.QuantumStatePreparation.load_from_compiler(
-                self,
-                ansatz=ansatz)
+            qspobj = qtm.qsp.QuantumStatePreparation(
+                self.u,
+                self.vdagger,
+                self.thetas,
+                ansatz)
             qspobj.save(state, file_name)
         else:
-            qstobj = qtm.qst.QuantumStateTomography.load_from_compiler(
-                self,
-                ansatz=ansatz)
+            qstobj = qtm.qst.QuantumStateTomography(
+                self.u,
+                self.vdagger,
+                self.thetas,
+                ansatz)
             qstobj.save(state, file_name)
         return
 

@@ -4,7 +4,164 @@ import qiskit
 import scipy
 import qtm.constant
 
+def get_wires_of_gate(gate: typing.Tuple):
+    """Get index bit that gate act on
 
+    Args:
+        - gate (qiskit.QuantumGate): Quantum gate
+
+    Returns:
+        - numpy arrray: list of index bits
+    """
+    list_wire = []
+    for register in gate[1]:
+        list_wire.append(register.index)
+    return list_wire
+
+
+def is_gate_in_list_wires(gate: typing.Tuple, wires: typing.List):
+    """Check if a gate lies on the next layer or not
+
+    Args:
+        - gate (qiskit.QuantumGate): Quantum gate
+        - wires (numpy arrray): list of index bits
+
+    Returns:
+        - Bool
+    """
+    list_wire = get_wires_of_gate(gate)
+    for wire in list_wire:
+        if wire in wires:
+            return True
+    return False
+
+
+def split_into_layers(qc: qiskit.QuantumCircuit):
+    """Split a quantum circuit into layers
+
+    Args:
+        - qc (qiskit.QuantumCircuit): origin circuit
+
+    Returns:
+        - list: list of list of quantum gates
+    """
+    layers = []
+    layer = []
+    wires = []
+    is_param_layer = None
+    for gate in qc.data:
+        name = gate[0].name
+        if name in qtm.constant.ignore_generator:
+            continue
+        param = gate[0].params
+        wire = get_wires_of_gate(gate)
+        if is_param_layer is None:
+            if len(param) == 0:
+                is_param_layer = False
+            else:
+                is_param_layer = True
+        # New layer's condition: depth increase or convert from non-parameterized layer to parameterized layer or vice versa
+        if is_gate_in_list_wires(gate, wires) or (is_param_layer == False and len(param) != 0) or (is_param_layer == True and len(param) == 0):
+            if is_param_layer == False:
+                # First field is 'Is parameterized layer or not?'
+                layers.append((False, layer))
+            else:
+                layers.append((True, layer))
+            layer = []
+            wires = []
+        # Update sub-layer status
+        if len(param) == 0 or name == 'state_preparation_dg':
+            is_param_layer = False
+        else:
+            is_param_layer = True
+        for w in wire:
+            wires.append(w)
+        layer.append((name, param, wire))
+    # Last sub-layer
+    if is_param_layer == False:
+        # First field is 'Is parameterized layer or not?'
+        layers.append((False, layer))
+    else:
+        layers.append((True, layer))
+    return layers
+
+def create_observers(qc: qiskit.QuantumCircuit, k: int = 0):
+    """Return dictionary of observers
+
+    Args:
+        - qc (qiskit.QuantumCircuit): Current circuit
+        - k (int, optional): Number of observers each layer. Defaults to qc.num_qubits.
+
+    Returns:
+        - Dict
+    """
+    if k == 0:
+        k = qc.num_qubits
+    observer = []
+    for gate in (qc.data)[-k:]:
+        gate_name = gate[0].name
+        # Non-param gates
+        if gate_name in ['barrier', 'swap']:
+            continue
+        # 2-qubit param gates
+        if gate[0].name in ['crx', 'cry', 'crz', 'cx', 'cz']:
+            # Take controlled wire as index
+            wire = qc.num_qubits - 1 - gate[1][1].index
+            # Take control wire as index
+            # wire = qc.num_qubits - 1 - gate[1][0].index
+        # Single qubit param gates
+        else:
+            wire = qc.num_qubits - 1 - gate[1][0].index
+        observer.append([gate_name, wire])
+    return observer
+
+def get_cry_index(qc, thetas):
+    """Return a list where i_th = 1 mean thetas[i] is parameter of CRY gate
+
+    Args:
+        - func (types.FunctionType): The creating circuit function
+        - thetas (np.ndarray): Parameters
+    Returns:
+        - np.ndarray: The index list has length equal with number of parameters
+    """
+    layers = split_into_layers(qc)
+    index_list = []
+    for layer in layers:
+        for gate in layer[1]:
+            if gate[0] == 'cry':
+                index_list.append(1)
+            else:
+                index_list.append(0)
+            if len(index_list) == len(thetas):
+                return index_list
+    return index_list
+
+def add_layer_into_circuit(qc: qiskit.QuantumCircuit, layer: typing.List):
+    """Based on information in layers, adding new gates into current circuit
+
+    Args:
+        - qc (qiskit.QuantumCircuit): calculating circuit
+        - layer (list): list of gate's informations
+
+    Returns:
+        - qiskit.QuantumCircuit: added circuit
+    """
+    for name, param, wire in layer:
+        if name == 'rx':
+            qc.rx(param[0], wire[0])
+        if name == 'ry':
+            qc.ry(param[0], wire[0])
+        if name == 'rz':
+            qc.rz(param[0], wire[0])
+        if name == 'crx':
+            qc.crx(param[0], wire[0], wire[1])
+        if name == 'cry':
+            qc.cry(param[0], wire[0], wire[1])
+        if name == 'crz':
+            qc.crz(param[0], wire[0], wire[1])
+        if name == 'cz':
+            qc.cz(wire[0], wire[1])
+    return qc
 
 def save_circuit(qc: qiskit.QuantumCircuit, file_name: str) -> None:
     """Save circuit as qpy object
@@ -48,226 +205,9 @@ def unit_vector(i: int, length: int) -> np.ndarray:
     return vector
 
 
-def parallized_swap_test(u: qiskit.QuantumCircuit):
-    """_summary_
-
-    Args:
-        u (qiskit.QuantumCircuit): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    # circuit = qtm.state.create_w_state(5)
-    n_qubit = u.num_qubits
-    qubits_list_first = list(range(n_qubit, 2*n_qubit))
-    qubits_list_second = list(range(2*n_qubit, 3*n_qubit))
-
-    # Create swap test circuit
-    swap_test_circuit = qiskit.QuantumCircuit(3*n_qubit, n_qubit)
-
-    # Add initial circuit the first time
-
-    swap_test_circuit = swap_test_circuit.compose(u, qubits=qubits_list_first)
-    # Add initial circuit the second time
-    swap_test_circuit = swap_test_circuit.compose(u, qubits=qubits_list_second)
-    swap_test_circuit.barrier()
-
-    # Add hadamard gate
-    swap_test_circuit.h(list(range(0, n_qubit)))
-    swap_test_circuit.barrier()
-
-    for i in range(n_qubit):
-        # Add control-swap gate
-        swap_test_circuit.cswap(i, i+n_qubit, i+2*n_qubit)
-    swap_test_circuit.barrier()
-
-    # Add hadamard gate
-    swap_test_circuit.h(list(range(0, n_qubit)))
-    swap_test_circuit.barrier()
-    return swap_test_circuit
 
 
-def concentratable_entanglement(u: qiskit.QuantumCircuit, exact=False):
-    """_summary_
 
-    Args:
-        u (qiskit.QuantumCircuit): _description_
-        exact (bool, optional): _description_. Defaults to False.
-
-    Returns:
-        _type_: _description_
-    """
-    qubit = list(range(u.num_qubits))
-    n = len(qubit)
-    cbits = qubit.copy()
-    swap_test_circuit = parallized_swap_test(u)
-
-    if exact:
-        statevec = qiskit.quantum_info.Statevector(swap_test_circuit)
-        statevec.seed(value=42)
-        probs = statevec.evolve(
-            swap_test_circuit).probabilities_dict(qargs=qubit)
-        return 1 - probs["0"*len(qubit)]
-    else:
-        for i in range(0, n):
-            swap_test_circuit.measure(qubit[i], cbits[i])
-
-        counts = qiskit.execute(
-            swap_test_circuit, backend=qtm.constant.backend, shots=qtm.constant.NUM_SHOTS
-        ).result().get_counts()
-
-        return 1-counts.get("0"*len(qubit), 0)/qtm.constant.NUM_SHOTS
-
-
-def extract_state(qc: qiskit.QuantumCircuit):
-    """Get infomation about quantum circuit
-
-    Args:
-        - qc (qiskit.QuantumCircuit): Extracted circuit
-
-    Returns:
-       - tuple: state vector and density matrix
-    """
-    psi = qiskit.quantum_info.Statevector.from_instruction(qc)
-    rho_psi = qiskit.quantum_info.DensityMatrix(psi)
-    return psi, rho_psi
-
-
-def trace_distance(rho, sigma):
-    """Since density matrices are Hermitian, so trace distance is 1/2 (Sigma(|lambdas|)) with lambdas are the eigenvalues of (rho_psi - rho_psi_hat) matrix
-
-    Args:
-        - rho (DensityMatrix): first density matrix
-        - sigma (DensityMatrix): second density matrix
-
-    Returns:
-        - float: trace metric has value from 0 to 1
-    """
-    w, _ = np.linalg.eig((rho - sigma).data)
-    return 1 / 2 * sum(abs(w))
-
-
-def trace_fidelity(rho, sigma):
-    """Calculating the fidelity metric
-
-    Args:
-        - rho (DensityMatrix): first density matrix
-        - sigma (DensityMatrix): second density matrix
-
-    Returns:
-        - float: trace metric has value from 0 to 1
-    """
-    rho = rho.data
-    sigma = sigma.data
-    return np.trace(
-        scipy.linalg.sqrtm(
-            (scipy.linalg.sqrtm(rho)) @ (rho)) @ (scipy.linalg.sqrtm(sigma)))
-
-
-def gibbs_trace_fidelity(rho, sigma):
-    """_summary_
-
-    Args:
-        rho (_type_): _description_
-        sigma (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    if rho is None:
-        return None
-    half_power_sigma = scipy.linalg.fractional_matrix_power(sigma, 1/2)
-    return np.trace(scipy.linalg.sqrtm(
-        half_power_sigma @ rho.data @ half_power_sigma))
-
-
-def gibbs_trace(rho):
-    """_summary_
-
-    Args:
-        rho (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    if rho is None:
-        return None
-    return np.trace(np.linalg.matrix_power(rho, 2))
-
-
-def get_metrics(rho, sigma, gibbs_rho, gibbs_sigma):
-    """Get different metrics between the origin state and the reconstructed state
-
-    Args:
-        - psi (Statevector): first state vector
-        - sigma (Statevector): second state vector
-
-    Returns:
-        - Tuple: trace and fidelity between two input vectors
-    """
-    return qtm.utilities.trace_distance(rho, sigma), qtm.utilities.trace_fidelity(rho, sigma), qtm.utilities.gibbs_trace(
-                                            gibbs_rho), qtm.utilities.gibbs_trace_fidelity(gibbs_rho, gibbs_sigma)
-
-
-def calculate_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas, gibbs=False):
-    """_summary_
-
-    Args:
-        u (qiskit.QuantumCircuit): _description_
-        vdagger (qiskit.QuantumCircuit): _description_
-        thetas (_type_): _description_
-        gibbs (bool, optional): _description_. Defaults to False.
-
-    Returns:
-        _type_: _description_
-    """
-    if (len(u.parameters)) > 0:
-        qc = u.bind_parameters(thetas)
-        rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
-        sigma = qiskit.quantum_info.DensityMatrix.from_instruction(
-            vdagger.inverse())
-        ce = concentratable_entanglement(u.bind_parameters(thetas))
-    else:
-        rho = qiskit.quantum_info.DensityMatrix.from_instruction(u)
-        qc = vdagger.bind_parameters(thetas).inverse()
-        sigma = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
-        ce = concentratable_entanglement(vdagger.bind_parameters(thetas))
-    if gibbs:
-        gibbs_rho = qiskit.quantum_info.partial_trace(rho, [0, 1])
-        gibbs_sigma = qiskit.quantum_info.partial_trace(sigma, [0, 1])
-    else:
-        gibbs_rho = None
-        gibbs_sigma = None
-    trace, fidelity, gibbs_trace, gibbs_trace_fidelity = get_metrics(
-        rho, sigma, gibbs_rho, gibbs_sigma)
-    return trace, np.real(fidelity), gibbs_trace, np.real(gibbs_trace_fidelity), ce 
-
-def calculate_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, gibbs=False):
-    """_summary_
-
-    Args:
-        u (qiskit.QuantumCircuit): _description_
-        vdagger (qiskit.QuantumCircuit): _description_
-        thetass (_type_): _description_
-        gibbs (bool, optional): _description_. Defaults to False.
-
-    Returns:
-        _type_: _description_
-    """
-    traces = []
-    fidelities = []
-    gibbs_traces = []
-    gibbs_trace_fidelities = []
-    ces = []
-    for thetas in thetass:
-        trace, fidelity, gibbs_trace, gibbs_trace_fidelity, ce = calculate_metric(
-            u, vdagger, thetas, gibbs)
-        traces.append(trace)
-        fidelities.append(fidelity)
-        gibbs_traces.append(gibbs_trace)
-        gibbs_trace_fidelities.append(gibbs_trace_fidelity)
-        ces.append(ce)
-    return traces, fidelities, gibbs_traces, gibbs_trace_fidelities, ces
 
 def haar_measure(n):
     """A Random matrix distributed with Haar measure
@@ -341,6 +281,41 @@ def truncate_circuit(qc: qiskit.QuantumCircuit, selected_depth: int) -> qiskit.Q
         qc1, qc2 = divide_circuit_by_depth(qc, selected_depth)
         return qc1
     
+def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas, gibbs=False):
+    qc = u.bind_parameters(thetas)
+    rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
+    sigma = qiskit.quantum_info.DensityMatrix.from_instruction(
+        vdagger.inverse())
+    if gibbs:
+        gibbs_rho = qiskit.quantum_info.partial_trace(rho, [0, 1])
+        gibbs_sigma = qiskit.quantum_info.partial_trace(sigma, [0, 1])
+    else:
+        gibbs_rho = None
+        gibbs_sigma = None
+    trace, fidelity, gibbs_trace, gibbs_trace_fidelity = qtm.utilities.get_metrics(
+        rho, sigma, gibbs_rho, gibbs_sigma)
+    return trace, np.real(fidelity)
+
+
+def calculate_QSP_metrics(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetass, gibbs=False):
+    traces = []
+    fidelities = []
+    gibbs_traces = []
+    gibbs_trace_fidelities = []
+    for thetas in thetass:
+        # Target state
+        # psi = qiskit.quantum_info.Statevector.from_instruction(vdagger).conjugate()
+        # rho = qiskit.quantum_info.DensityMatrix(psi)
+        # Calculate the metrics
+        trace, fidelity, gibbs_trace, gibbs_trace_fidelity = calculate_QSP_metric(
+            u, vdagger, thetas, gibbs)
+        traces.append(trace)
+        fidelities.append(fidelity)
+        gibbs_traces.append(gibbs_trace)
+        gibbs_trace_fidelities.append(gibbs_trace_fidelity)
+    ce = concentratable_entanglement(u.bind_parameters(thetas))
+    return traces, fidelities, ce
+
 def divide_circuit(qc: qiskit.QuantumCircuit, percent: float) -> typing.List[qiskit.QuantumCircuit]:
     """Dividing circuit into two sub-circuit
 

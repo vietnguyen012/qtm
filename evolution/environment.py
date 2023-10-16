@@ -51,7 +51,6 @@ class EEnvironment():
         if isinstance(params, str):
             file = open(params, 'rb')
             data = pickle.load(file)
-            print(data)
             params = data.params
             self.params = data.params
             self.fitness_func = data.fitness_func

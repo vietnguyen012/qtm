@@ -1,11 +1,33 @@
 import pickle
-import qtm.utilities
+import qtm.metric
 import qiskit
 import numpy as np
-import types
+import types, typing
+
 
 class QuantumStatePreparation:
-    def __init__(self, u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas: np.ndarray, ansatz: types.FunctionType):
+    def __init__(self, file_name: str):
+        """Load QSP from .qspobj file
+
+        Args:
+            file_name (str): Path to file
+
+        """
+        file = open(file_name, 'rb')
+        data = pickle.load(file)
+        self.__init__(
+            data.u,
+            data.vdagger,
+            data.thetas,
+            data.ansatz
+        )
+        file.close()
+        return
+
+    def __init__(self, u: typing.Union[qiskit.QuantumCircuit, str], 
+                 vdagger: qiskit.QuantumCircuit = None, 
+                 thetas: np.ndarray = None, 
+                 ansatz: types.FunctionType = None):
         """There are four key atttributes for QSP problem: u, vdagger, parameters of u and name of u.
 
         Args:
@@ -17,43 +39,41 @@ class QuantumStatePreparation:
         Returns:
             QuantumStatePreparation: completed object
         """
-        self.u = u
-        self.vdagger = vdagger
-        self.thetas = thetas
-        self.ansatz = ansatz
-        
-        self.trace, self.fidelity = qtm.utilities.calculate_QSP_metric(
-            u, vdagger, thetas)
-        self.num_qubits = u.num_qubits
+
+        if isinstance(u, str):
+            file = open(u, 'rb')
+            data = pickle.load(file)
+            self.u = data.u
+            self.vdagger = data.vdagger
+            self.thetas = data.thetas
+            self.ansatz = data.ansatz
+        else:
+            self.u = u
+            self.vdagger = vdagger
+            self.thetas = thetas
+            self.ansatz = ansatz
+
+        traces, fidelities = qtm.metric.calculate_compilation_metrics(
+            self.u, self.vdagger, np.expand_dims(self.thetas, axis=0))
+        self.trace = traces[0]
+        self.fidelity = fidelities[0]
+        self.num_qubits = self.u.num_qubits
         self.num_params = len(self.u.parameters)
         self.num_layers = int(
             self.num_params/len(self.ansatz(self.num_qubits, 1).parameters))
         self.qc = self.u.bind_parameters(self.thetas)
-        return self
+        return
 
-    @classmethod
-    def load_from_compiler(self, compiler, ansatz: types.FunctionType):
-        """Load QSP from its parent (Compiler)
+    # def __init__(self, compiler, ansatz: types.FunctionType):
+    #     """Load QSP from its parent (Compiler)
 
-        Args:
-            compiler (qtm.qcompilation.QuantumCompilation): Parent/Superset of QSP
-            ansatz (types.FunctionType): Name of u
+    #     Args:
+    #         compiler (qtm.qcompilation.QuantumCompilation): Parent/Superset of QSP
+    #         ansatz (types.FunctionType): Name of u
 
-        """
-        return self.__init__(self, compiler.u, compiler.vdagger, compiler.thetass[-1], ansatz)
+    #     """
+    #     return self.__init__(self, compiler.u, compiler.vdagger, compiler.thetass[-1], ansatz)
 
-    @classmethod
-    def load_from_file(self, file_name: str):
-        """Load QSP from .qspobj file
-
-        Args:
-            file_name (str): Path to file
-
-        """
-        file = open(file_name, 'rb')
-        data = pickle.load(file)
-        return self.__init__(self, data.u, data.vdagger, data.thetas, data.ansatz)
-    @classmethod
     def save(self, state: str, file_name: str):
         """Save QSP to .qspobj file with a given path
 
@@ -66,3 +86,15 @@ class QuantumStatePreparation:
         pickle.dump(self, file)
         file.close()
         return
+
+    # def __init__(self) -> None:
+    #     self.u = None
+    #     self.vdagger = None
+    #     self.thetas = []
+    #     self.ansatz = None
+
+    #     self.trace, self.fidelity = 0, 0
+    #     self.num_qubits = 0
+    #     self.num_params = 0
+    #     self.num_layers = 0
+    #     return

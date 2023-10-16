@@ -497,17 +497,18 @@ def g2(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
     thetas = qiskit.circuit.ParameterVector(
         'theta', 2 * num_qubits * num_layers)
     j = 0
-    for i in range(num_qubits):
-        qc.ry(thetas[j], i)
-        j += 1
-    for i in range(0, num_qubits - 1, 2):
-        qc.cz(i, i + 1)
-    for i in range(num_qubits):
-        qc.ry(thetas[j], i)
-        j += 1
-    for i in range(1, num_qubits - 1, 2):
-        qc.cz(i, i + 1)
-    qc.cz(0, num_qubits - 1)
+    for _ in range(num_layers):
+        for i in range(num_qubits):
+            qc.ry(thetas[j], i)
+            j += 1
+        for i in range(0, num_qubits - 1, 2):
+            qc.cz(i, i + 1)
+        for i in range(num_qubits):
+            qc.ry(thetas[j], i)
+            j += 1
+        for i in range(1, num_qubits - 1, 2):
+            qc.cz(i, i + 1)
+        qc.cz(0, num_qubits - 1)
     return qc
 
 
@@ -558,3 +559,41 @@ def g2gnw(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
         qc = compose_circuit([qc, g2(num_qubits, 1), gn(
             num_qubits, 1), zxz_layer(num_qubits, 1)])
     return qc
+
+def parallized_swap_test(u: qiskit.QuantumCircuit):
+    """_summary_
+
+    Args:
+        u (qiskit.QuantumCircuit): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # circuit = qtm.state.create_w_state(5)
+    n_qubit = u.num_qubits
+    qubits_list_first = list(range(n_qubit, 2*n_qubit))
+    qubits_list_second = list(range(2*n_qubit, 3*n_qubit))
+
+    # Create swap test circuit
+    swap_test_circuit = qiskit.QuantumCircuit(3*n_qubit, n_qubit)
+
+    # Add initial circuit the first time
+
+    swap_test_circuit = swap_test_circuit.compose(u, qubits=qubits_list_first)
+    # Add initial circuit the second time
+    swap_test_circuit = swap_test_circuit.compose(u, qubits=qubits_list_second)
+    swap_test_circuit.barrier()
+
+    # Add hadamard gate
+    swap_test_circuit.h(list(range(0, n_qubit)))
+    swap_test_circuit.barrier()
+
+    for i in range(n_qubit):
+        # Add control-swap gate
+        swap_test_circuit.cswap(i, i+n_qubit, i+2*n_qubit)
+    swap_test_circuit.barrier()
+
+    # Add hadamard gate
+    swap_test_circuit.h(list(range(0, n_qubit)))
+    swap_test_circuit.barrier()
+    return swap_test_circuit
