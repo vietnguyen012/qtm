@@ -3,7 +3,7 @@ import qtm.metric
 import qiskit
 import numpy as np
 import types, typing
-
+import os
 
 class QuantumStatePreparation:
     def __init__(self, file_name: str):
@@ -87,14 +87,32 @@ class QuantumStatePreparation:
         file.close()
         return
 
-    # def __init__(self) -> None:
-    #     self.u = None
-    #     self.vdagger = None
-    #     self.thetas = []
-    #     self.ansatz = None
+    @staticmethod
+    def find_satisfying_qspobj(state: str, num_qubits: int, error_rate: float, database_path: str):
+        best_qspobj = None
+        files = [f for f in os.listdir(database_path) if os.path.isfile(os.path.join(database_path, f))]
+        files = [f for f in files if f.split('_')[0] == state and int(f.split('_')[2]) == num_qubits]
+        print(files)
+        for i in range(0, len(files)):
+            path = database_path + files[i]
+            qspobj = QuantumStatePreparation(path)
+            if qspobj.fidelity > 1 - error_rate:
+                if best_qspobj is None:
+                    best_qspobj = qspobj
+                if qspobj.u.depth() < best_qspobj.u.depth():
+                    best_qspobj = qspobj
+                elif qspobj.u.depth() == best_qspobj.u.depth():
+                    if qspobj.num_params < best_qspobj.num_params:
+                        best_qspobj = qspobj
+            
+                print(best_qspobj.fidelity,best_qspobj.u.depth(),best_qspobj.num_params)             
+            
+        if best_qspobj is None:
+            print(f"Can not find the existing ansatz which can prepare state {state} {num_qubits} qubits >= {1 - error_rate} fidelity")
+            return
+        else:
+            layer_verb = 'layer' if best_qspobj.num_layers == 1 else 'layers' 
+            print(f"Found {best_qspobj.ansatz.__name__} {best_qspobj.num_layers} {layer_verb} which can prepare state {state} {num_qubits} qubits >= {1 - error_rate} fidelity ({best_qspobj.fidelity})")
+            return best_qspobj
 
-    #     self.trace, self.fidelity = 0, 0
-    #     self.num_qubits = 0
-    #     self.num_params = 0
-    #     self.num_layers = 0
-    #     return
+

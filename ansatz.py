@@ -1,8 +1,7 @@
 import qiskit
 import math
-from qtm.utilities import compose_circuit
-import qtm.measure
-import qtm.state
+import qtm.utilities
+import qtm.constant
 import numpy as np
 import random
 
@@ -122,7 +121,7 @@ def hypergraph_ansatz(num_qubits: int, num_layers: int = 1) -> qiskit.QuantumCir
 def hypergraph_w_ansatz(num_qubits: int = 3, num_layers: int = 1) -> qiskit.QuantumCircuit:
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit(
+        qc = qtm.utilities.compose_circuit(
             [qc, hypergraph_ansatz(num_qubits), zxz_layer(num_qubits)])
     return qc
 
@@ -169,7 +168,7 @@ def wy_layer(num_qubits: int) -> qiskit.QuantumCircuit:
 def binho_ansatz(num_qubits: int = 3, num_layers: int = 1) -> qiskit.QuantumCircuit:
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, rx_layer(num_qubits),
+        qc = qtm.utilities.compose_circuit([qc, rx_layer(num_qubits),
                               wy_layer(num_qubits),
                               rz_layer(num_qubits),
                               wy_layer(num_qubits),
@@ -196,7 +195,7 @@ def alternating_ZXZlayer_ansatz(num_qubits: int = 3,
                                 num_layers: int = 1) -> qiskit.QuantumCircuit:
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, ry_layer(num_qubits),
+        qc = qtm.utilities.compose_circuit([qc, ry_layer(num_qubits),
                               swap_layer(num_qubits),
                               ry_layer(num_qubits),
                               swap_layer(num_qubits, shift=1),
@@ -326,7 +325,7 @@ def Wchain_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1) -> qiskit.Quant
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, Wchain(num_qubits),
+        qc = qtm.utilities.compose_circuit([qc, Wchain(num_qubits),
                               zxz_layer(num_qubits)])
     return qc
 
@@ -334,7 +333,7 @@ def Wchain_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1) -> qiskit.Quant
 def Walternating_ZXZlayer_ansatz(num_qubits, num_layers: int = 1) -> qiskit.QuantumCircuit:
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, Wchain(num_qubits),
+        qc = qtm.utilities.compose_circuit([qc, Wchain(num_qubits),
                               zxz_layer(num_qubits)])
     return qc
 
@@ -350,7 +349,7 @@ def WalternatingCNOT_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1) -> qi
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, WalternatingCNOT(num_qubits),
+        qc = qtm.utilities.compose_circuit([qc, WalternatingCNOT(num_qubits),
                               zxz_layer(num_qubits)])
     return qc
 
@@ -366,7 +365,7 @@ def Walltoall_ZXZlayer_ansatz(num_qubits: int, num_layers: int = 1, limit=0) -> 
     """    
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit(
+        qc = qtm.utilities.compose_circuit(
             [qc, Walltoall(qc, limit=limit), zxz_layer(num_qubits)])
     return qc
 
@@ -386,7 +385,7 @@ def WalltoallCNOT_ZXZlayer_ansatz(num_qubits: int = 3,
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit(
+        qc = qtm.utilities.compose_circuit(
             [qc, WalltoallCNOT(qc, limit=limit), zxz_layer(num_qubits)])
     return qc
 
@@ -403,7 +402,7 @@ def zxz_layer(num_qubits: int = 3, num_layers: int = 1) -> qiskit.QuantumCircuit
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit(
+        qc = qtm.utilities.compose_circuit(
             [qc, rz_layer(num_qubits), rx_layer(num_qubits), rz_layer(num_qubits)])
     return qc
 
@@ -524,7 +523,7 @@ def gn(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, ry_layer(num_qubits), cz_layer(num_qubits)])
+        qc = qtm.utilities.compose_circuit([qc, ry_layer(num_qubits), cz_layer(num_qubits)])
     return qc
 
 
@@ -540,7 +539,7 @@ def g2gn(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, g2(num_qubits, 1), gn(num_qubits, 1)])
+        qc = qtm.utilities.compose_circuit([qc, g2(num_qubits, 1), gn(num_qubits, 1)])
     return qc
 
 
@@ -556,7 +555,7 @@ def g2gnw(num_qubits: int, num_layers: int) -> qiskit.QuantumCircuit:
     """
     qc = qiskit.QuantumCircuit(num_qubits, num_qubits)
     for _ in range(0, num_layers):
-        qc = compose_circuit([qc, g2(num_qubits, 1), gn(
+        qc = qtm.utilities.compose_circuit([qc, g2(num_qubits, 1), gn(
             num_qubits, 1), zxz_layer(num_qubits, 1)])
     return qc
 

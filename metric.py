@@ -1,7 +1,6 @@
 
 import qtm.ansatz
 import qtm.constant
-import typing
 import numpy as np
 import qiskit
 import scipy

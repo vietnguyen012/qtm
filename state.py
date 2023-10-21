@@ -1,7 +1,5 @@
-import qiskit, numpy as np
-import qtm.encoding
-from qiskit.quantum_info import SparsePauliOp
-
+import qiskit
+import numpy as np
 """
 Function to load classical data in a quantum device
 This code is copy from https://github.com/adjs/dcsp/blob/master/encoding.py
@@ -259,7 +257,7 @@ def create_haar_state(num_qubits: int):
 def create_haar_state_inverse(num_qubits: int):
     psi = 2*np.random.rand(2**num_qubits)-1
     psi = psi / np.linalg.norm(psi)
-    encoder = qtm.encoding.Encoding(psi, 'amplitude_encoding')
+    encoder = Encoding(psi, 'amplitude_encoding')
     qc = encoder.qcircuit
     return qc.inverse()
 
@@ -363,7 +361,7 @@ def calculate_hamiltonian(num_qubits):
     # identity = np.array([[1,0],[0,1]])
     labels = ["XI", "IX","ZZ","ZZ"]
     coeffs = [1,1,1,1]
-    spo = SparsePauliOp(labels,coeffs)
+    spo = qiskit.quantum_info.SparsePauliOp(labels,coeffs)
     return spo.to_matrix() 
 
 # Calculating the eigenvalues and eigenvectors of the cost Hamiltonian

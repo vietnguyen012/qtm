@@ -1,11 +1,4 @@
 import pickle
-import qtm.utilities
-import qiskit
-import numpy as np
-import types
-
-
-import pickle
 import qtm.metric
 import qiskit
 import numpy as np
