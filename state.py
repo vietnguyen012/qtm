@@ -366,6 +366,8 @@ def calculate_hamiltonian(num_qubits):
 
 # Calculating the eigenvalues and eigenvectors of the cost Hamiltonian
 
+# Calculating the eigenvalues and eigenvectors of the cost Hamiltonian
+
 def find_eigenvec_eigenval(matrix):
 
     value, vector = np.linalg.eig(matrix)
