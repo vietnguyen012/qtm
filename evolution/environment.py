@@ -6,10 +6,20 @@ import pickle
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from qtm.evolution import ecircuit, selection
 import qtm.random_circuit
 import qtm.utilities
+from .selection import sastify_circuit
+from .ecircuit import ECircuit
+import concurrent.futures
 
+
+def bypass_compile(circuit: ECircuit):
+    circuit.compile()
+    return circuit
+def multiple_compile(circuits: typing.List[ECircuit]):
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = executor.map(bypass_compile, circuits)
+        return results
 class EEnvironment():
     """Saved information for evolution process
     """
@@ -74,7 +84,7 @@ class EEnvironment():
             self.file_name = file_name
             self.best_candidate = None
             self.current_generation = 0
-            self.population: typing.List[ecircuit.ECircuit] = []
+            self.population: typing.List[ECircuit] = []
             self.populations = []
             self.best_score_progress = []
             self.scores_in_loop = []
@@ -94,7 +104,9 @@ class EEnvironment():
         for i, circuit in enumerate(self.population):
             circuit.strength_point = scaled_strength_points[i]
         return
+    
     def evol(self, verbose: int = 1):
+        
         # Pre-procssing
         if verbose == 1:
             bar = qtm.utilities.ProgressBar(
@@ -114,6 +126,7 @@ class EEnvironment():
             self.current_generation += 1
             self.scores_in_loop = []
             new_population = []
+            offsprings = []
             # Selection
             self.population = self.selection_func(self.population)
             # Calculate new metric for all circuit, used for crossover
@@ -123,14 +136,18 @@ class EEnvironment():
                 print(f'Fitness {self.population[i].fitness}, Strengh {self.population[i].strength_point}')
                 offspring1, offspring2 = self.crossover_func(
                     self.population[i], self.population[i+1])
-                new_population.extend([self.population[i], self.population[i + 1], offspring1, offspring2])
-                self.scores_in_loop.extend([offspring1.fitness, offspring2.fitness])
+                offsprings.extend([offspring1, offspring2])
+                new_population.extend([self.population[i], self.population[i + 1], ])
+            offsprings = multiple_compile(offsprings)
+            for offspring in offsprings:
+                print('k', offspring.fitness)
+                new_population.append(offspring)
+                self.scores_in_loop.append(offspring.fitness)
             self.population = new_population
             self.populations.append(self.population)
             for circuit in self.population:
                 if random.random() < self.prob_mutate:
                     self.mutate_func(circuit, self.pool)
-
             # Post-process
             best_score = np.min(self.scores_in_loop)
             best_index = np.argmin(self.scores_in_loop)
@@ -156,9 +173,9 @@ class EEnvironment():
             random_circuit = qtm.random_circuit.generate_with_pool(
                 self.num_qubits, self.depth, self.pool)
             
-            if selection.sastify_circuit(random_circuit):
+            if sastify_circuit(random_circuit):
                 num_sastify_circuit += 1
-                circuit = ecircuit.ECircuit(
+                circuit = ECircuit(
                     random_circuit,
                     self.fitness_func)
                 circuit.compile()
@@ -194,6 +211,7 @@ class EEnvironment():
         return
     def plot(self, metrics: str):
         """Plot number of generation versus best score of each generation
+        Example: ['best_fitness','average_fitness']
         """
         for metric in metrics:
             if metric == 'best_fitness':

@@ -2,6 +2,8 @@ import typing
 import qiskit
 import random
 import numpy as np
+import concurrent.futures
+from .ecircuit import ECircuit
 
 
 

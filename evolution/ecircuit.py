@@ -1,6 +1,6 @@
-import types
+import types, typing
 import qiskit
-
+import concurrent.futures
 class ECircuit():
     def __init__(self, qc: qiskit.QuantumCircuit, fitness_func: types.FunctionType) -> None:
         """Enhanced qiskit circuit with fitness properties
@@ -13,7 +13,6 @@ class ECircuit():
         self.fitness_func = fitness_func
         self.fitness = 0
         self.strength_point = 0
-        self.compile()
         return
     def compile(self):
         """Run fitness function to compute fitness value

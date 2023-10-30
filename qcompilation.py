@@ -275,10 +275,16 @@ class QuantumCompilation():
             self.ces = qtm.metric.calculate_ce_metrics(*metric_params)
         return
 
-    def plot(self):
-        plt.plot(self.loss_values)
-        plt.ylabel("Loss values")
+    def plot(self, metrics):
+        if 'compilation' in metrics:
+            plt.plot(self.compilation_fidelities, label = 'Compilation fidelity')
+            plt.plot(self.compilation_traces, label = 'Compilation trace')
+        if 'gibbs' in metrics:
+            plt.plot(self.gibbs_fidelities, label = 'Gibbs fidelity')
+            plt.plot(self.gibbs_traces, label = 'Gibbs trace')
+        plt.ylabel("Value")
         plt.xlabel('Num. iteration')
+        plt.legend()
         return
     
     def plot_animation(self, interval: int = 100, file_name: str = 'test.gif'):
