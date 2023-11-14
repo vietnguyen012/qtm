@@ -336,7 +336,7 @@ def truncate_circuit(qc: qiskit.QuantumCircuit, selected_depth: int) -> qiskit.Q
         return qc1
     
 # def calculate_QSP_metric(u: qiskit.QuantumCircuit, vdagger: qiskit.QuantumCircuit, thetas, gibbs=False):
-#     qc = u.bind_parameters(thetas)
+#     qc = u.assign_parameters(thetas)
 #     rho = qiskit.quantum_info.DensityMatrix.from_instruction(qc)
 #     sigma = qiskit.quantum_info.DensityMatrix.from_instruction(
 #         vdagger.inverse())
@@ -367,7 +367,7 @@ def truncate_circuit(qc: qiskit.QuantumCircuit, selected_depth: int) -> qiskit.Q
 #         fidelities.append(fidelity)
 #         gibbs_traces.append(gibbs_trace)
 #         gibbs_trace_fidelities.append(gibbs_trace_fidelity)
-#     ce = concentratable_entanglement(u.bind_parameters(thetas))
+#     ce = concentratable_entanglement(u.assign_parameters(thetas))
 #     return traces, fidelities, ce
 
 def divide_circuit(qc: qiskit.QuantumCircuit, percent: float) -> typing.List[qiskit.QuantumCircuit]:

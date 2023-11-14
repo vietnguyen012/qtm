@@ -1,5 +1,6 @@
 
 import qiskit
+import qiskit.quantum_info as qi
 import numpy as np
 import qtm.constant
 import qtm.utilities
@@ -12,12 +13,9 @@ def single_2term_psr(qc: qiskit.QuantumCircuit, thetas: np.ndarray, i, **kwargs)
     thetas1, thetas2 = thetas.copy(), thetas.copy()
     thetas1[i] += qtm.constant.two_term_psr['s']
     thetas2[i] -= qtm.constant.two_term_psr['s']
-
-    qc1 = qc.bind_parameters(thetas1)
-    qc2 = qc.bind_parameters(thetas2)
     return -qtm.constant.two_term_psr['r'] * (
-        qtm.measure.measure(qc1, list(range(qc1.num_qubits))) -
-        qtm.measure.measure(qc2, list(range(qc2.num_qubits))))
+        qtm.measure.measure(qc.copy(), thetas1) -
+        qtm.measure.measure(qc.copy(), thetas2))
 
 
 def single_4term_psr(qc: qiskit.QuantumCircuit, thetas: np.ndarray, i, **kwargs):
@@ -27,15 +25,11 @@ def single_4term_psr(qc: qiskit.QuantumCircuit, thetas: np.ndarray, i, **kwargs)
     thetas2[i] -= qtm.constant.four_term_psr['alpha']
     thetas3[i] += qtm.constant.four_term_psr['beta']
     thetas4[i] -= qtm.constant.four_term_psr['beta']
-    qc1 = qc.bind_parameters(thetas1)
-    qc2 = qc.bind_parameters(thetas2)
-    qc3 = qc.bind_parameters(thetas3)
-    qc4 = qc.bind_parameters(thetas4)
     return - (qtm.constant.four_term_psr['d_plus'] * (
-        qtm.measure.measure(qc1, list(range(qc1.num_qubits))) -
-        qtm.measure.measure(qc2, list(range(qc2.num_qubits)))) - qtm.constant.four_term_psr['d_minus'] * (
-        qtm.measure.measure(qc3, list(range(qc3.num_qubits))) -
-        qtm.measure.measure(qc4, list(range(qc4.num_qubits)))))
+        qtm.measure.measure(qc.copy(), thetas1) -
+        qtm.measure.measure(qc.copy(), thetas2)) - qtm.constant.four_term_psr['d_minus'] * (
+        qtm.measure.measure(qc.copy(), thetas3) -
+        qtm.measure.measure(qc.copy(), thetas4)))
 
 
 def grad_loss(qc: qiskit.QuantumCircuit, thetas: np.ndarray):
@@ -54,13 +48,10 @@ def grad_loss(qc: qiskit.QuantumCircuit, thetas: np.ndarray):
     """
     index_list = qtm.utilities.get_cry_index(qc, thetas)
     grad_loss = np.zeros(len(thetas))
-
     for i in range(0, len(thetas)):
         if index_list[i] == 0:
-            # In equation (13)
             grad_loss[i] = single_2term_psr(qc, thetas, i)
         if index_list[i] == 1:
-            # In equation (14)
             grad_loss[i] = single_4term_psr(qc, thetas, i)
     return grad_loss
 
@@ -81,8 +72,8 @@ def grad_psi(qc: qiskit.QuantumCircuit, thetas: np.ndarray, r: float, s: float):
     for i in range(0, len(thetas)):
         thetas_copy = thetas.copy()
         thetas_copy[i] += s
-        qc_copy = qc.bind_parameters(thetas_copy)
-        psi_qc = qiskit.quantum_info.Statevector.from_instruction(qc_copy).data
+        qc_copy = qc.assign_parameters(thetas_copy)
+        psi_qc = qi.Statevector(qc_copy).data
         psi_qc = np.expand_dims(psi_qc, 1)
         gradient_psi.append(r * psi_qc)
     gradient_psi = np.array(gradient_psi)
@@ -132,7 +123,7 @@ def calculate_g(qc: qiskit.QuantumCircuit, observers: typing.Dict[str, int]):
         - numpy array: block-diagonal submatrix g
     """
     # Get |psi>
-    psi = qiskit.quantum_info.Statevector.from_instruction(qc).data
+    psi = qi.Statevector(qc).data
     psi = np.expand_dims(psi, 1)
     # Get <psi|
     psi_hat = np.transpose(np.conjugate(psi))
@@ -189,8 +180,8 @@ def qng_hessian(uvdagger: qiskit.QuantumCircuit, thetas: np.ndarray):
     thetas_origin = thetas
 
     def f(thetas):
-        qc = uvdagger.bind_parameters(thetas)
-        qc_reverse = uvdagger.bind_parameters(thetas_origin).inverse()
+        qc = uvdagger.assign_parameters(thetas)
+        qc_reverse = uvdagger.assign_parameters(thetas_origin).inverse()
         qc = qc.compose(qc_reverse)
         return qtm.measure.measure(qc, list(range(qc.num_qubits)))
     G = [[0 for _ in range(length)] for _ in range(length)]

@@ -226,7 +226,7 @@ class QuantumCompilation():
                 grad_psi1 = qtm.measure.grad_psi(uvaddager, self.thetas,
                                             r=1 / 2,
                                             s=np.pi)
-                qc_binded = uvaddager.bind_parameters(self.thetas)
+                qc_binded = uvaddager.assign_parameters(self.thetas)
                 psi = qiskit.quantum_info.Statevector.from_instruction(qc_binded).data
                 psi = np.expand_dims(psi, 1)
                 if optimizer_name == 'qng_fubini_study':
@@ -253,9 +253,8 @@ class QuantumCompilation():
             else:
                 thetas = self.optimizer(self.thetas, grad_loss)
             
-            qc_binded = uvaddager.bind_parameters(self.thetas)
             loss = self.loss_func(
-                qtm.measure.measure(qc_binded, list(range(self.u.num_qubits))))
+                qtm.measure.measure(uvaddager.copy(), self.thetas))
             self.loss_values.append(loss)
             self.thetass.append(self.thetas.copy())
             if verbose == 1:
@@ -282,6 +281,7 @@ class QuantumCompilation():
         if 'gibbs' in metrics:
             plt.plot(self.gibbs_fidelities, label = 'Gibbs fidelity')
             plt.plot(self.gibbs_traces, label = 'Gibbs trace')
+        plt.plot(self.loss_values, label = 'Loss value')
         plt.ylabel("Value")
         plt.xlabel('Num. iteration')
         plt.legend()

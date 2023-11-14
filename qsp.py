@@ -61,7 +61,7 @@ class QuantumStatePreparation:
         self.num_params = len(self.u.parameters)
         self.num_layers = int(
             self.num_params/len(self.ansatz(self.num_qubits, 1).parameters))
-        self.qc = self.u.bind_parameters(self.thetas)
+        self.qc = self.u.assign_parameters(self.thetas)
         return
 
     # def __init__(self, compiler, ansatz: types.FunctionType):

@@ -10,8 +10,15 @@ import qtm.random_circuit
 import qtm.utilities
 from .selection import sastify_circuit
 from .ecircuit import ECircuit
+from .predictor import Predictor
+from ..constant import NORMAL_MODE, PREDICT_MODE
 import concurrent.futures
 
+def extract_circuit(circuits: typing.List[ECircuit]):
+    extracted_circuits = []
+    for circuit in circuits:
+        extracted_circuits.append(circuit.qc)
+    return extracted_circuits
 
 def bypass_compile(circuit: ECircuit):
     circuit.compile()
@@ -94,6 +101,7 @@ class EEnvironment():
         self.num_qubits = params['num_qubits']
         self.prob_mutate = params['prob_mutate']
         self.threshold = params['threshold']
+        self.predictor = None
         return
     def calculate_strength_point(self):
         inverse_fitnesss = [1- circuit.fitness for circuit in self.population]
@@ -105,14 +113,14 @@ class EEnvironment():
             circuit.strength_point = scaled_strength_points[i]
         return
     
-    def evol(self, verbose: int = 1):
-        
-        # Pre-procssing
+    def set_predictor(self, predictor: Predictor):
+        self.predictor = predictor
+        return
+    def evol(self, mode: str = NORMAL_MODE, verbose: int = 1):
+        circuits = []
         if verbose == 1:
             bar = qtm.utilities.ProgressBar(
                 max_value=self.num_generation, disable=False)
-        
-            
         if self.current_generation == 0:
             print("Initialize population ...")
             self.init()
@@ -122,33 +130,52 @@ class EEnvironment():
         else:
             print(f"Continute evol progress at generation {self.current_generation} ...")
         for generation in range(self.current_generation, self.num_generation):
+            #####################
+            ##### Pre-process ###
+            #####################
             print(f"Evol at generation {generation}")
             self.current_generation += 1
             self.scores_in_loop = []
             new_population = []
             offsprings = []
-            # Selection
+            #####################
+            ##### Selection #####
+            #####################
+            if mode == NORMAL_MODE:
+                self.population = multiple_compile(self.population)
+
+            if mode == PREDICT_MODE:
+                if self.predictor is None:
+                    assert "Predictor is none, please set it by using set_predictor() method"
+                return
             self.population = self.selection_func(self.population)
-            # Calculate new metric for all circuit, used for crossover
-            self.calculate_strength_point()
+            circuits.append(extract_circuit(self.population))
+            #####################
+            ##### Cross-over ####
+            #####################
             for i in range(0, int(self.num_circuit/2), 2):
-                # Crossover
-                print(f'Fitness {self.population[i].fitness}, Strengh {self.population[i].strength_point}')
                 offspring1, offspring2 = self.crossover_func(
                     self.population[i], self.population[i+1])
                 offsprings.extend([offspring1, offspring2])
                 new_population.extend([self.population[i], self.population[i + 1], ])
-            offsprings = multiple_compile(offsprings)
             for offspring in offsprings:
                 print('k', offspring.fitness)
                 new_population.append(offspring)
                 self.scores_in_loop.append(offspring.fitness)
             self.population = new_population
             self.populations.append(self.population)
-            for circuit in self.population:
+            
+            ####################
+            ##### Mutation #####
+            ####################
+            
+            for i in range(0, len(self.population)):
                 if random.random() < self.prob_mutate:
-                    self.mutate_func(circuit, self.pool)
-            # Post-process
+                    self.population[i] = self.mutate_func(self.population[i], self.pool)
+                    
+            #####################
+            ##### Post-process ###
+            #####################
             best_score = np.min(self.scores_in_loop)
             best_index = np.argmin(self.scores_in_loop)
             if self.best_candidate.fitness > self.population[best_index].fitness:
@@ -164,7 +191,7 @@ class EEnvironment():
         print(f'End evol progress, best score ever: {best_score}')
         return
 
-    def init(self):
+    def init(self, mode: str):
         """Create and evaluate first generation in the environment
         """
         self.population = []
@@ -172,13 +199,11 @@ class EEnvironment():
         while(num_sastify_circuit <= self.num_circuit):
             random_circuit = qtm.random_circuit.generate_with_pool(
                 self.num_qubits, self.depth, self.pool)
-            
             if sastify_circuit(random_circuit):
                 num_sastify_circuit += 1
                 circuit = ECircuit(
                     random_circuit,
                     self.fitness_func)
-                circuit.compile()
                 self.population.append(circuit)
         self.best_candidate = self.population[0]
         return
